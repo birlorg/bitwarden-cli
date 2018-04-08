@@ -7,7 +7,7 @@ STATUS:
 	This is very minimally working *for me* on macOS 10.13.  Bug reports, patches, etc. are welcome. I'm not yet using this in "production" i.e. as my daily driver, I'm still on 1password, but will now focus on moving my data over.
 
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home
-				But is mirrored to github: https://github.com/birlorg/bitwarden-cli
+	But is mirrored to github: https://github.com/birlorg/bitwarden-cli
 
 ------------------------------------------------------------
 EXAMPLE USAGE: (output not shown)
@@ -53,6 +53,8 @@ This should mostly function fine on Windows, but is currently untested. bug repo
 -----------------------------------------------------------------------
 INSTALLATION
 
+NOTE: the rust and python are 2 different implementations that are not (currently) tied together.
+you need not install both, just install one (the pythone one currently if you want it to work)..
 
 rust installation:
 	clone the repo (either fossil or git)
@@ -79,4 +81,30 @@ TROUBLESHOOTING:
 export DEBUG=true
 and then run bitwarden.  It will output LOTS of stuff, some of it is security sensitive, so be careful when you copy/paste the logs.
 
--- fix up documentation: http://fossil-scm.org/index.html/doc/trunk/www/embeddeddoc.wiki
+
+--------------------------------
+TODO planned(code welcome):
+
+ * finish off minimal implementation of the python version (search, add, etc)
+ * build and release executables for mac and windows. build Makefile to automate this.
+ * finish off rust crypto and agent, port python version to use rust crypto and agent
+ * add server support (i.e. can also act like a server, so you could for instance have your local browser and desktop talk locally and work 100% off-line)
+ * fix up documentation in HTML(http://fossil-scm.org/index.html/doc/trunk/www/embeddeddoc.wiki) and make prettier.
+
+
+Goals:
+  * be a useful bitwarden tool that works on openBSD, debian, macOS and windows since these are the platforms I spend most of my time on.  UI is abysmal, thanks to @kspearrin for doing that slog, go pay him.
+  * be able to work off-line completely if you wish. (slab mode already does this..mostly)
+
+Non-Goals:
+ * GUI's because writing them is misery. @kspearrin has this well-handled! YAY!
+
+---------------------------------------------
+repo stuff:
+
+tools/fsl2git.sh
+tools/git2fsl.sh
+cd ../bitwarden-cli.git
+git checkout trunk
+git push -u origin trunk
+
