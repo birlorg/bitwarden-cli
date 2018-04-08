@@ -12,6 +12,7 @@ import signal
 import sys
 import time
 # pylint: disable=E0401
+import objectpath
 import psutil  # https://psutil.readthedocs.io/en/latest/
 import requests
 import standardpaths  # https://pystandardpaths.readthedocs.io/
@@ -117,6 +118,29 @@ class Client(object):
         value = crypto.decrypt(value, decryptedEncryptionKey, macKey)
         return value
 
+    def fetchName(self, name, pwonly, decrypt, fulldecrypt):
+        """
+        """
+        ret = self.find(name, nameOnly = True)
+        if not ret:
+            return
+        if len(ret) > 1:
+            log.error("found more than 1 record, only returning the first.")
+        uuid = ret[0]['uuid']    
+        data = self.db.query(
+            "select json from ciphers where uuid=:uuid", uuid=uuid).first()['json']
+        data = json.loads(data)
+        if pwonly:
+            pw = data['Login']['Password']
+            pw = self._decrypt(pw)
+            ret = pw
+        else: 
+            ret = json.dumps(
+                data,
+                indent=4, sort_keys=True, ensure_ascii=False
+            )
+        return ret
+
     def fetchUUID(self, uuid, pwonly, decrypt, fulldecrypt):
         """
         """
@@ -134,6 +158,22 @@ class Client(object):
                 indent=4, sort_keys=True, ensure_ascii=False
             )
         return ret
+
+    def find(self, query, nameOnly=False):
+        """find stuff"""
+        ciphers = self.db.query("select uuid, name, uri from ciphers")
+        results = []
+        for cipher in ciphers:
+            c = {}
+            c['uuid'] = cipher['uuid']
+            c['name'] = self._decrypt(cipher['name'])
+            if query in c['name']:
+                results.append(c)
+            if not nameOnly:
+                c['uri'] = self._decrypt(cipher['uri'])
+                if query in c['uri']:
+                    results.append(c)
+        return results
 
     def slab(self):
         """operate in sudolikeaboss mode"""

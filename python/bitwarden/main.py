@@ -43,6 +43,7 @@ class CLI():
             self.config.url = url
         if identurl:
             self.config.identurl = identurl
+        self.client = client.Client(self.db, self.debug)
 
 
 @click.group()
@@ -72,14 +73,13 @@ def cli(ctx, url, identurl, debug, db):
 
 @cli.command()
 @click.argument('email', required=True)
-@click.password_option()
+@click.option('--password', prompt=True, hide_input=True)
 @click.option('--hint', default="", required=False)
 @click.option('--name', envvar='USER', default="", required=False)
 @click.pass_obj
 def register(cli, email, password, name, hint):
     """register a new account on server."""
     log.debug("registering as:%s", email)
-    cli.client = client.Client(cli.db, cli.debug)
     cli.client.register(email, password, name, hint)
     del password
 
@@ -87,7 +87,7 @@ def register(cli, email, password, name, hint):
 @cli.command()
 @click.argument('email', required=True)
 @click.option('--timeout', "-t", default=0)
-@click.password_option()
+@click.option('--password', prompt=True, hide_input=True)
 @click.pass_obj
 def login(cli, email, password, timeout):
     """login to server.
@@ -119,7 +119,6 @@ def login(cli, email, password, timeout):
             to define them one time.
     """
     # log.debug("login as:%s", email)
-    cli.client = client.Client(cli.db, cli.debug)
     cli.client.login(email, password, timeout)
     del password
 
@@ -171,7 +170,6 @@ def status(cli):
 @click.pass_obj
 def slab(cli):
     """run in slab mode."""
-    cli.client = client.Client(cli.db, cli.debug)
     cli.client.slab()
 
 
@@ -184,6 +182,8 @@ def slab(cli):
 def fetch_uuid(cli, uuid, pwonly, decrypt, fulldecrypt):
     """fetch by UUID.
 
+    This will be quite fast, as it only has to decrypt 1 cipher record.
+
     --pwonly (or -p) will return ONLY the password, in decrypted form.
     --decrypted (or -d) will return the json object with all
         encrypted fields decrypted, except the password.
@@ -192,8 +192,67 @@ def fetch_uuid(cli, uuid, pwonly, decrypt, fulldecrypt):
 
     output format is always pretty printed JSON, unless --pwonly is set.
     """
-    cli.client = client.Client(cli.db, cli.debug)
     click.echo(cli.client.fetchUUID(uuid, pwonly, decrypt, fulldecrypt))
+
+@cli.command()
+@click.option('--pwonly', "-p", is_flag=True, default=False)
+@click.option('--decrypt/--no-decrypt', "-d", is_flag=True, default=False)
+@click.option('--fulldecrypt', is_flag=True, default=False)
+@click.argument("name", required=True)
+@click.pass_obj
+def fetch_name(cli, name, pwonly, decrypt, fulldecrypt):
+    """fetch by name.
+
+    This will be relatively slow, as it has to decrypt every single name
+    to compare before it finds the right one.
+
+    --pwonly (or -p) will return ONLY the password, in decrypted form.
+    --decrypted (or -d) will return the json object with all
+        encrypted fields decrypted, except the password.
+    --fulldecrypt just like --decrypted, except will return
+        the password decrypted as well.
+
+    output format is always pretty printed JSON, unless --pwonly is set.
+    """
+    click.echo(cli.client.fetchName(name, pwonly, decrypt, fulldecrypt))
+
+@cli.command()
+@click.pass_obj
+@click.option('--format', "-f", type=click.Choice(
+    ['csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex', 'ods']),
+    required=False, default=None)
+@click.option('--headers/--no-headers', default=True)
+@click.argument("query", required=True)
+def find(cli, query, format, headers):
+    """find query in username,uri
+
+    this does a simpe python string find i.e.:
+        if query in username:
+    but searches against username and first url
+
+    You can export it in almost any format you wish with -f
+
+    to get the password once you found an entry use fetch_uuid 
+
+    complicated example:
+   
+    \b
+    bw find example.com -f tsv --no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p
+
+   which means: find all entries with example.com in them, use fzf
+   to select a record and return only the password.
+    """
+    ret = cli.client.find(query)
+    if ret:
+        d = tablib.Dataset()
+        if headers:
+            d.headers = ret[0].keys()
+        for row in ret:
+            d.append(row.values())
+        if format:
+            click.echo(d.export(format))
+        else:
+            click.echo(d)
 
 
 @cli.command()
@@ -208,7 +267,11 @@ def sql(cli, query, params, format):
 
     Basically just a wrapper around the records CLI.
 
+    you can get the results back in pretty much any format you wish:
+    ['csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex', 'ods']),
+
     Query: can either be a filename to run or a SQL query string.
+
     Query Parameters:
         Query parameters can be specified in key=value format, and injected
         into your query in :key format e.g.:
@@ -245,7 +308,6 @@ def sql(cli, query, params, format):
 def pull(cli):
     """pull all records from server, updating local store as needed."""
     # log.debug("login as:%s", email)
-    cli.client = client.Client(cli.db, cli.debug)
     cli.client.pull()
 
 
@@ -254,7 +316,6 @@ def pull(cli):
 def logout(cli):
     """logout from server, stop agent and forget all secret keys."""
     # log.debug("login as:%s", email)
-    # cli.client = client.Client(cli.db, cli.debug)
     cli.config.master_key = None
     cli.config.token = None
     print("logged out, forgotten master_key and remote access_token.")

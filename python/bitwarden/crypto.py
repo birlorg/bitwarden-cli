@@ -102,6 +102,7 @@ def unpad(s):
     # log.debug("unpad before:%s", s)
     ret = s.replace('\x06', '')
     ret = ret.replace('\x01', '')
+    ret = ret.replace('\x0b','')
     # log.debug("unpad after:%s", ret)
     return ret
 

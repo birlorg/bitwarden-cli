@@ -233,8 +233,14 @@ class Config():
         """
         ret = None
         try:
-            key = requests.post("http://127.0.0.1:{}".format(self.agent_port),
-                                json={'key': self.agent_token}).json()
+            r = requests.post("http://127.0.0.1:{}".format(self.agent_port),
+                              json={'key': self.agent_token})
+            if r.status_code != 200:
+                log.error(r.text)
+            try:
+                key = r.json()
+            except json.decoder.JSONDecodeError:
+                log.error("problem json decoding:%s", r.text)
         except requests.exceptions.ConnectionError:
             log.error("agent not running, you must login.")
         try:
@@ -274,7 +280,7 @@ class Config():
         agent_token = base64.b64encode(os.urandom(16)).decode('utf-8')
         cmd = [self.agent_location, '127.0.0.1:{}'.format(self.agent_port)]
         log.debug("running agent:%s", cmd)
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         data = {
             'master_key': key,
             'agent_token': agent_token
@@ -282,7 +288,13 @@ class Config():
         timeout = self.agent_timeout
         if timeout > 0:
             data['tiemout'] = timeout
+        else:
+            log.debug("sending no timeout because:%s", timeout)
+        log.debug("sending to agent:%s", pprint.pformat(data))
         out = json.dumps(data) + "\n"
         p.stdin.write(out.encode('utf-8'))
         self.agent_token = agent_token
+        self.agent_timeout = time.time() + timeout
+        out = p.communicate()
+        log.debug("agent returned:%s:%s", out[0], out[1])
         return True

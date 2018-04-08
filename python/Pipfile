@@ -17,6 +17,8 @@ webpy = {git = "https://github.com/webpy/webpy"}
 python-daemon = "*"
 psutil = "*"
 pystandardpaths = "*"
+objectpath = "*"
+pytz = "*"
 
 
 [dev-packages]

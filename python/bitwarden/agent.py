@@ -34,6 +34,7 @@ lh = logging.FileHandler(logFile)
 lh.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 log = logging.getLogger(__name__)
+log.addHandler(lh)
 if os.getenv('DEBUG', False):
     # print("debug ls on")
     log.setLevel(logging.DEBUG)
@@ -58,7 +59,6 @@ class index:
     def POST(self):
         """index post"""
         global secret
-        log.info("connection from:%s", web.ctx.ip)
         try:
             data = json.loads(web.data())
         except json.JSONDecodeError:
@@ -67,7 +67,9 @@ class index:
             log.info("correct agent secret, returning master_key")
             return json.dumps({'master_key': secret['master_key']})
         else:
+            log.warning("sent wrong agent key, denying access")
             return json.dumps({"error": "invalid agent_token"})
+        log.warning("NO agent key sent. bad actor maybe?")
         return json.dumps({"error": "unknown error"})
 
     def GET(self):
