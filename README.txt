@@ -10,7 +10,7 @@ source repo lives @ https://fossil.birl.ca/bitwarden-cli/home
 				But is mirrored to github:
 
 ------------------------------------------------------------
-EXAMPLE USAGE:
+EXAMPLE USAGE: (output not shown)
 
 ALIAS bw=bitwarden
 
@@ -78,3 +78,5 @@ Common to both, the DB setup:
 TROUBLESHOOTING:
 export DEBUG=true
 and then run bitwarden.  It will output LOTS of stuff, some of it is security sensitive, so be careful when you copy/paste the logs.
+
+-- fix up documentation: http://fossil-scm.org/index.html/doc/trunk/www/embeddeddoc.wiki
