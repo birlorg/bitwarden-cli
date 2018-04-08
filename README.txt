@@ -7,7 +7,7 @@ STATUS:
 	This is very minimally working *for me* on macOS 10.13.  Bug reports, patches, etc. are welcome. I'm not yet using this in "production" i.e. as my daily driver, I'm still on 1password, but will now focus on moving my data over.
 
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home
-				But is mirrored to github:
+				But is mirrored to github: https://github.com/birlorg/bitwarden-cli
 
 ------------------------------------------------------------
 EXAMPLE USAGE: (output not shown)
