@@ -61,8 +61,22 @@ def connect(dbURL=None):
 
 
 class Config():
+    """Configuration settings.
+
+    We define every possible config setting as a property so that every
+    setting gets documented.  Otherwise nobody would bother.
+    Plus it makes access in the rest of the code much easier :)
+    """
+
     def __init__(self, db):
         self.db = db
+        # defined from the perspective of a cipher object.
+        self.encryptedValues = (
+            ("Data", "Name"),
+            ("Data", "Password"),
+            ("Data", "Uri"),
+
+        )
 
     def set(self, key, value):
         """set the key to equal value in the DB"""
@@ -153,6 +167,31 @@ class Config():
         return self.set('client_token', json.dumps(value))
 
     @property
+    def last_sync_time(self):
+        """last time we synchronized with the server."""
+        return self.get('last_sync_time', None)
+
+    @last_sync_time.setter
+    def last_sync_time(self, value):
+        """set last_sync_time"""
+        return self.set('last_sync_time', value)
+
+    @property
+    def agent_location(self):
+        """path to agent executable.."""
+        value = self.get('agent_location', None)
+        if not value:
+            # get last item off the stack, so we can rock the actual binary call path.
+            value = os.path.dirname(os.path.abspath(inspect.stack()[-1][1]))
+            value = os.path.join(value, 'bitwarden-agent')
+        return value
+
+    @agent_location.setter
+    def agent_location(self, value):
+        """setter"""
+        return self.set('agent_location', value)
+
+    @property
     def agent_token(self):
         """token to talk with agent."""
         return self.get('agent_token', None)
@@ -161,6 +200,19 @@ class Config():
     def agent_token(self, value):
         """set token"""
         return self.set('agent_token', value)
+
+    @property
+    def agent_timeout(self):
+        """
+        timeout for the agent. <0 means no timeout.
+        > 0 means timeout for that many seconds.
+        """
+        return int(self.get('agent_tiemout', 0))
+
+    @agent_timeout.setter
+    def agent_timeout(self, value):
+        """setter for agent_timeout"""
+        return self.set('agent_timeout', int(value))
 
     @property
     def agent_port(self):
@@ -180,41 +232,56 @@ class Config():
         master key that decrypts information.
         """
         ret = None
-        if time.time() > self.client_token['token_expires']:
-            raise IOError("Token has expired, please login again.")
-        key = requests.post("http://127.0.0.1:{}".format(self.agent_port),
-                            json={'key': self.agent_token}).json()
+        try:
+            key = requests.post("http://127.0.0.1:{}".format(self.agent_port),
+                                json={'key': self.agent_token}).json()
+        except requests.exceptions.ConnectionError:
+            log.error("agent not running, you must login.")
         try:
             ret = base64.b64decode(key['master_key'])
         except IndexError:
-            log.error("expected master_key but agent returned:%s", pprint.pformat(ret))
+            log.error("expected master_key but agent returned:%s",
+                      pprint.pformat(ret))
         return ret
 
-    @master_key.setter
-    def master_key(self, value):
-        """setter for master key -- starts agent"""
-        # log.debug("setting master_key before b64encode:%s", value)
+    def isAgentRunning(self):
+        """return pid if agent is running, else None
+        """
         pidFile = os.path.join(standardpaths.get_writable_path(
             'app_local_data'), 'agent.pid')
         if os.path.exists(pidFile):
             # agent already running, not so good for us.
             pid = int(open(pidFile, 'r').read())
             if psutil.pid_exists(pid):
-                os.kill(pid, signal.SIGTERM)
+                return pid
             else:
+                # cleanup
                 os.unlink(pidFile)
+        return None
+
+    @master_key.setter
+    def master_key(self, value):
+        """setter for master key -- starts agent
+        set value to None will stop agent and not restart it. 
+        """
+        pid = self.isAgentRunning()
+        if pid:
+            os.kill(pid, signal.SIGTERM)
         if value is None:
             log.debug("value of none: shutdown agent, not starting it again")
             return
         key = base64.b64encode(value).decode('utf-8')
         agent_token = base64.b64encode(os.urandom(16)).decode('utf-8')
-        cmd = ['bitwarden-agent', '127.0.0.1:{}'.format(self.agent_port)]
+        cmd = [self.agent_location, '127.0.0.1:{}'.format(self.agent_port)]
+        log.debug("running agent:%s", cmd)
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         data = {
             'master_key': key,
-            'tiemout': self.client_token['token_expires'],
             'agent_token': agent_token
         }
+        timeout = self.agent_timeout
+        if timeout > 0:
+            data['tiemout'] = timeout
         out = json.dumps(data) + "\n"
         p.stdin.write(out.encode('utf-8'))
         self.agent_token = agent_token

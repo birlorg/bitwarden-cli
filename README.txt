@@ -11,31 +11,67 @@ source repo lives @ https://fossil.birl.ca/bitwarden-cli/home
 	Historic fun fact: all crypto code had to be stored outside the USA.
 
 ------------------------------------------------------------
-EXAMPLE USAGE: (output not shown)
+EXAMPLE USAGE: 
 
 ALIAS bw=bitwarden
 
-get help:
-	bw --help
+GET HELP:
+---------
+
+$ bitwarden --help
+Usage: bitwarden [OPTIONS] COMMAND [ARGS]...
+
+  CLI main
+
+Options:
+  --url TEXT
+  --identurl TEXT
+  --debug / --no-debug
+  --db TEXT
+  --help                Show this message and exit.
+
+Commands:
+  deletedb    ***THIS ERASES DATA*** Flush and empty the...
+  fetch_uuid  fetch by UUID.
+  login       login to server.
+  logout      logout from server, stop agent and forget all...
+  pull        pull all records from server, updating local...
+  register    register a new account on server.
+  slab        run in slab mode.
+  sql         query the local data store using SQL.
+  status      Show various statistics.
+
+$ bw sql --help
+	Usage: bitwarden sql [OPTIONS] QUERY
+
+	  query the local data store using SQL.
+
+	  Basically just a wrapper around the records CLI.
+
+	  Query: can either be a filename to run or a SQL query string. Query
+	  Parameters:     Query parameters can be specified in key=value format, and
+	  injected     into your query in :key format e.g.:     $ bitwarden sql
+	  'select created_at from ciphers where uuid ~= :uuid' -p
+	  uuid=84c1bf0a-b0e8-49c4-8e58-8d0fc0a247c4
+
+	  Examples:     bw sql "select uuid from ciphers where uuid is not null"
+
+	Options:
+	  -p, --params TEXT
+	  -f, --format [csv|tsv|json|yaml|html|xls|xlsx|dbf|latex|ods]
+	  --help                          Show this message and exit.
 
 login:
 	bw login nobody@example.com
 it will prompy you for a password. if you are a moron, you can specify it with --password <MY PASSWORD HERE> but don't be a moron.
 
-sync all the data from the server locally:
-	bw sync
-
-run in slab (sudolikeaboss) mode (details below)
-	bw slab
-
-logout, stop the agent and forget all the keys:	
-	bw logout
 
 SLAB mode:
 	"sudolikeaboss is a simple application that aims to make your life as a dev, ops, or just a random person who likes to ssh and sudo into boxes much, much easier by allowing you to access your bitwarden passwords on the terminal. All you need is iterm2, bitwarden, a mac, and a dream." - from: https://github.com/ravenac95/sudolikeaboss
 
-We support self-hosted installations just pass --url
+We support self-hosted installations just pass --url and --identurl
 	The url will be saved indefinitely, you do not need to set it every time (not even when you login again, it will be remembered)
+	see bw login --help for details.
 
 -----------------------------------------------------------------------
 SECURITY:

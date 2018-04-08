@@ -56,7 +56,13 @@ class Client(object):
         log.debug("registering to: %s with:%s", url, pprint.pformat(data))
         return requests.post(url, json=data)
 
-    def login(self, email, password):
+    def login(self, email, password, timeout):
+        if not email:
+            email = self.config.email
+            if not email:
+                log.error("Must give an email address, not in config.")
+        else:
+            self.config.email = email
         masterKey = crypto.makeKey(password, email)
         masterPasswordHash = crypto.hashedPassword(password, email)
         del password
@@ -81,6 +87,10 @@ class Client(object):
             token = r.json()
             token['token_expires'] = time.time()+token['expires_in']
             self.config.client_token = token
+            if timeout == 0:
+                self.config.agent_timeout = token['expires_in']
+            else:
+                self.config.agent_timeout = timeout
             log.debug("token set:%s", pprint.pformat(token))
             self.config.master_key = masterKey
             self.config.encryption_key = token['Key']
@@ -89,6 +99,41 @@ class Client(object):
             log.error("bad client login got %s data returned:%s",
                       r.status_code, r.text)
             return False
+
+    def _decrypt(self, value):
+        """decrypt a value
+        assumes input to be a cipherstring of encryption type 2.
+        """
+        encryptionKey = self.config.encryption_key
+        if not encryptionKey:
+            log.error("you must run pull first")
+            sys.exit(1)
+        masterKey = self.config.master_key
+        if not masterKey:
+            log.error("No agent running! you must login first.")
+            sys.exit(1)
+        decryptedEncryptionKey, macKey = crypto.decryptEncryptionKey(
+            encryptionKey, masterKey)
+        value = crypto.decrypt(value, decryptedEncryptionKey, macKey)
+        return value
+
+    def fetchUUID(self, uuid, pwonly, decrypt, fulldecrypt):
+        """
+        """
+        ret = None
+        data = self.db.query(
+            "select json from ciphers where uuid=:uuid", uuid=uuid).first()['json']
+        data = json.loads(data)
+        if pwonly:
+            pw = data['Login']['Password']
+            pw = self._decrypt(pw)
+            ret = pw
+        else: 
+            ret = json.dumps(
+                data,
+                indent=4, sort_keys=True, ensure_ascii=False
+            )
+        return ret
 
     def slab(self):
         """operate in sudolikeaboss mode"""
@@ -114,7 +159,7 @@ class Client(object):
                 data = self.db.query(
                     "select json from ciphers where uuid=:uuid", uuid=row['uuid']).first()['json']
                 log.debug(json.dumps(json.loads(data), indent=4,
-                          sort_keys=True, ensure_ascii=False))
+                                     sort_keys=True, ensure_ascii=False))
                 continue
             log.debug(url)
             if 'sudolikeaboss://' in url:
@@ -134,47 +179,29 @@ class Client(object):
 
     def pull(self):
         """pull from remote server"""
-        token=self.config.client_token
+        token = self.config.client_token
         if not token:
             raise IOError("You must login first.")
         if time.time() > token['token_expires']:
             raise IOError("Token has expired, please login again.")
         log.debug("url base:%s", self.config.url)
-        url=posixpath.join(self.config.url, 'sync')
-        header={"Authorization": "Bearer {}".format(token['access_token'])}
+        url = posixpath.join(self.config.url, 'sync')
+        header = {"Authorization": "Bearer {}".format(token['access_token'])}
         log.debug("sync call to:%s with header:%s", url, header)
-        ret=requests.get(url, headers=header).json()
+        ret = requests.get(url, headers=header).json()
         log.debug("sync returned:%s", pprint.pformat(ret))
-        EncryptedEncryptionKey=ret['Profile']['Key']
+        EncryptedEncryptionKey = ret['Profile']['Key']
         if not self.config.encryption_key:
-            self.config.encryption_key=EncryptedEncryptionKey
+            self.config.encryption_key = EncryptedEncryptionKey
         for cipher in ret['Ciphers']:
-            uuid=cipher['Id']
-            update=self.db.query(
+            uuid = cipher['Id']
+            update = self.db.query(
                 "select uuid from ciphers where uuid=:uuid", uuid=uuid).first()
             if update:
-                qry="update ciphers set name=:name, uri=:uri, json=:json, updated_at=DATETIME('NOW') where uuid=:uuid"
+                qry = "update ciphers set name=:name, uri=:uri, json=:json, updated_at=DATETIME('NOW') where uuid=:uuid"
             else:
-                qry="insert into ciphers (uuid,  name, uri, json, created_at, updated_at) VALUES (:uuid, :name,:uri,:json,DATETIME('NOW'),DATETIME('NOW'))"
+                qry = "insert into ciphers (uuid,  name, uri, json, created_at, updated_at) VALUES (:uuid, :name,:uri,:json,DATETIME('NOW'),DATETIME('NOW'))"
             self.db.query(qry, uuid=uuid, name=cipher['Name'],
                           uri=cipher['Data']['Uri'], json=json.dumps(cipher))
+        self.config.last_sync_time = time.asctime()
         return "pull finished"
-       # url = ret['Ciphers'][0]['Data']['Uri']
-       # password = ret['Ciphers'][0]['Data']['Password']
-       # username = ret['Ciphers'][0]['Data']['Username']
-       # log.debug("EncryptedEncryptionKey:%s", EncryptedEncryptionKey)
-       # log.debug("master_key:%s", self.config.master_key)
-       # encryptionKey, macKey = crypto.decryptEncryptionKey(
-       #     EncryptedEncryptionKey, self.config.master_key)
-       # log.debug("encryptionKey:%s", encryptionKey)
-       # log.debug("macKey:%s", macKey)
-       # log.debug("macKey length:%s", len(macKey))
-       # # log.debug("encrypted username:%s", username)
-       # # username = crypto.decrypt(username, encryptionKey, macKey)
-       # # log.debug("decrypted username:%s", username)
-       # log.debug("encryptedURL:%s", url)
-       # url = crypto.decrypt(url, encryptionKey, macKey)
-       # log.debug("decrypted url:%s", url)
-       # log.debug("encryptedPAssword:%s", password)
-       # password = crypto.decrypt(password, encryptionKey, macKey)
-       # log.debug("decrypted password:%s", password)
