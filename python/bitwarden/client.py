@@ -126,20 +126,8 @@ class Client(object):
             return
         if len(ret) > 1:
             log.error("found more than 1 record, only returning the first.")
-        uuid = ret[0]['uuid']    
-        data = self.db.query(
-            "select json from ciphers where uuid=:uuid", uuid=uuid).first()['json']
-        data = json.loads(data)
-        if pwonly:
-            pw = data['Login']['Password']
-            pw = self._decrypt(pw)
-            ret = pw
-        else: 
-            ret = json.dumps(
-                data,
-                indent=4, sort_keys=True, ensure_ascii=False
-            )
-        return ret
+        uuid = ret[0]['uuid']
+        return self.fetchUUID(uuid, pwonly, decrypt, fulldecrypt)
 
     def fetchUUID(self, uuid, pwonly, decrypt, fulldecrypt):
         """
@@ -152,6 +140,10 @@ class Client(object):
             pw = data['Login']['Password']
             pw = self._decrypt(pw)
             ret = pw
+        elif decrypt:
+            log.error("unimplemented")
+        elif fulldecrypt:
+            log.error("unimplemented")
         else: 
             ret = json.dumps(
                 data,

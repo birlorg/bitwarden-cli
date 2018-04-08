@@ -21,7 +21,7 @@ GET HELP:
 $ bitwarden --help
 Usage: bitwarden [OPTIONS] COMMAND [ARGS]...
 
-  CLI main
+  Bitwarden CLI program.
 
 Options:
   --url TEXT
@@ -32,7 +32,9 @@ Options:
 
 Commands:
   deletedb    ***THIS ERASES DATA*** Flush and empty the...
+  fetch_name  fetch by name.
   fetch_uuid  fetch by UUID.
+  find        find query in username,uri this does a simpe...
   login       login to server.
   logout      logout from server, stop agent and forget all...
   pull        pull all records from server, updating local...
@@ -40,6 +42,7 @@ Commands:
   slab        run in slab mode.
   sql         query the local data store using SQL.
   status      Show various statistics.
+
 
 $ bw sql --help
 	Usage: bitwarden sql [OPTIONS] QUERY
