@@ -1,0 +1,23 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[packages]
+
+requests = "*"
+records = "*"
+cryptography = "*"
+pytest = "*"
+click = "*"
+weboy = {git = "https://github.com/webpy/webpy"}
+webpy = {git = "https://github.com/webpy/webpy"}
+python-daemon = "*"
+psutil = "*"
+pystandardpaths = "*"
+
+
+[dev-packages]
+

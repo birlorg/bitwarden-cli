@@ -1,0 +1,16 @@
+[package]
+name = "bitwarden"
+version = "0.1.0"
+authors = ["Birl.org"]
+publish = false
+
+[dependencies]
+rust-crypto = "^0.2"
+rand = "^0.4"
+rustc-serialize = "^0.3"
+serde_json = "1.0"
+reqwest = "0.8.5"
+rpassword = "2.0.0"
+rouille = "^2.1"
+uuid = { version = "^0.6", features = ["v5"]}
+clap = {version = "^2.31", features = ["yaml"]}

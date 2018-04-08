@@ -1,0 +1,22 @@
+name: bitwarden
+version: "0.1.0"
+author: birl.org
+about: Bitwarden CLI
+subcommands:
+  - login
+    about: Login to bitwarden
+    args: 
+      - email:
+        required: true
+        help: Email address to login as
+      - password:
+        help: Password to login with
+  - register
+        about: Register with bitwarden server
+        args:
+          - email:
+            required: true
+            help: email address to login with
+        - password:
+          help: password to login with
+      
