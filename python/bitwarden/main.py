@@ -52,6 +52,7 @@ class CLI():
 @click.option('--identurl', envvar='BITWARDEN_IDENT_URL', required=False, default=None)
 @click.option('--debug/--no-debug', default=False, envvar='DEBUG')
 @click.option('--db', envvar='BITWARDEN_DB', default=None)
+@click.version_option()
 @click.pass_context
 def cli(ctx, url, identurl, debug, db):
     """Bitwarden CLI program."""
