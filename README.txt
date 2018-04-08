@@ -8,6 +8,7 @@ STATUS:
 
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home
 	But is mirrored to github: https://github.com/birlorg/bitwarden-cli
+	Historic fun fact: all crypto code had to be stored outside the USA.
 
 ------------------------------------------------------------
 EXAMPLE USAGE: (output not shown)

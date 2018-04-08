@@ -193,8 +193,7 @@ class Config():
     @master_key.setter
     def master_key(self, value):
         """setter for master key -- starts agent"""
-        log.debug("setting master_key before b64encode:%s", value)
-        key = base64.b64encode(value).decode('utf-8')
+        # log.debug("setting master_key before b64encode:%s", value)
         pidFile = os.path.join(standardpaths.get_writable_path(
             'app_local_data'), 'agent.pid')
         if os.path.exists(pidFile):
@@ -204,7 +203,10 @@ class Config():
                 os.kill(pid, signal.SIGTERM)
             else:
                 os.unlink(pidFile)
-
+        if value is None:
+            log.debug("value of none: shutdown agent, not starting it again")
+            return
+        key = base64.b64encode(value).decode('utf-8')
         agent_token = base64.b64encode(os.urandom(16)).decode('utf-8')
         cmd = ['bitwarden-agent', '127.0.0.1:{}'.format(self.agent_port)]
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE)

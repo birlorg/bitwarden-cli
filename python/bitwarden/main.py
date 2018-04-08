@@ -42,6 +42,8 @@ class CLI():
             self.config.identurl = identurl
 
 # click docs: http://click.pocoo.org/6/complex/#building-a-git-clone
+
+
 @click.group()
 # default for URL is in the db.py file, so it will not be changed if already set..
 @click.option('--url', envvar='BITWARDEN_URL', required=False, default=None)
@@ -73,19 +75,20 @@ def cli(ctx, url, identurl, debug, db):
 @click.option('--hint', default="", required=False)
 @click.option('--name', envvar='USER', default="", required=False)
 @click.pass_obj
-def register(cli, email, password,name, hint):
-    """login"""
+def register(cli, email, password, name, hint):
+    """register a new account on server."""
     log.debug("registering as:%s", email)
     cli.client = client.Client(cli.db, cli.debug)
     cli.client.register(email, password, name, hint)
     del password
+
 
 @cli.command()
 @click.argument('email', required=False)
 @click.password_option()
 @click.pass_obj
 def login(cli, email, password):
-    """login"""
+    """login to server."""
     # log.debug("login as:%s", email)
     cli.client = client.Client(cli.db, cli.debug)
     cli.client.login(email, password)
@@ -99,25 +102,22 @@ def slab(cli):
     cli.client = client.Client(cli.db, cli.debug)
     cli.client.slab()
 
+
 @cli.command()
 @click.pass_obj
-def sync(cli):
-    """synchronize with server."""
+def pull(cli):
+    """pull all records from server, updating local store as needed."""
     # log.debug("login as:%s", email)
     cli.client = client.Client(cli.db, cli.debug)
-    cli.client.sync()
+    cli.client.pull()
 
 
 @cli.command()
 @click.pass_obj
 def logout(cli):
-    """logout"""
+    """logout from server, stop agent and forget all secret keys."""
     # log.debug("login as:%s", email)
     # cli.client = client.Client(cli.db, cli.debug)
     cli.config.master_key = None
     cli.config.token = None
     print("logged out, forgotten master_key and remote access_token.")
-
-
-def pwentry():
-    log.debug("pwentry")

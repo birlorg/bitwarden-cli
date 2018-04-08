@@ -94,7 +94,7 @@ class Client(object):
         """operate in sudolikeaboss mode"""
         encryptionKey = self.config.encryption_key
         if not encryptionKey:
-            log.error("you must run sync first")
+            log.error("you must run pull first")
             sys.exit(1)
         masterKey = self.config.master_key
         if not masterKey:
@@ -132,8 +132,8 @@ class Client(object):
         password = data['Login']['Password']
         print("{}".format(crypto.decrypt(password, decryptedEncryptionKey, macKey)))
 
-    def sync(self):
-        """sync with remote server"""
+    def pull(self):
+        """pull from remote server"""
         token=self.config.client_token
         if not token:
             raise IOError("You must login first.")
@@ -158,7 +158,7 @@ class Client(object):
                 qry="insert into ciphers (uuid,  name, uri, json, created_at, updated_at) VALUES (:uuid, :name,:uri,:json,DATETIME('NOW'),DATETIME('NOW'))"
             self.db.query(qry, uuid=uuid, name=cipher['Name'],
                           uri=cipher['Data']['Uri'], json=json.dumps(cipher))
-        return "sync finished"
+        return "pull finished"
        # url = ret['Ciphers'][0]['Data']['Uri']
        # password = ret['Ciphers'][0]['Data']['Password']
        # username = ret['Ciphers'][0]['Data']['Username']
