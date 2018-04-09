@@ -29,12 +29,12 @@ setup(
     version=VERSION,
     author="Birl.org developers",
     author_email="bitwarden@birl.org",
-    description="A Python implementation and CLI for bitwarden",
+    description="Cross Platform Bitwarden library and CLI with sudolikeaboss.",
     long_description=readme(),
     license="MIT",
     url="https://fossil.birl.ca/bitwarden-cli/doc/trunk/README.txt",
     classifiers=[],
-    #install_requires=read_requirements('requirements.txt'),
+    # install_requires=read_requirements('requirements.txt'),
     tests_require=read_requirements('requirements-tests-py3.txt'),
     packages=[
         'bitwarden'
