@@ -6,6 +6,7 @@ pylint: disable=W191
 import os
 import json
 import logging
+import sys
 
 # pylint: disable=E0401
 import click
@@ -68,8 +69,12 @@ def cli(ctx, url, identurl, debug, db):
             os.chmod(writePath, 0o0700)
         if not os.path.exists(filePath):
             # pylint: disable=E501
-            msg = "Database does not exist, use lb or copy tools/bitwarden.sqlite to:{}"
+            msg = "Database does not exist." + os.linesep
+            msg += "You can use Liquibase and generate it," + os.linesep
+            msg += "or for the lazy:" + os.linesep
+            msg += "curl -o {} https://fossil.birl.ca/bitwarden-cli/doc/trunk/tools/bitwarden.sqlite"
             print(msg.format(filePath))
+            sys.exit(2)
     cli = CLI(url, identurl, debug, db)
     ctx.obj = cli
 
