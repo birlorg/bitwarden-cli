@@ -1,7 +1,8 @@
 """
 Bitwarden crypto functions.
 
-Yes, this code is UGLY, The documentation is either missing, inconsistent or confusing.
+Yes, this code is UGLY, The  bitwarden documentation is either
+missing, inconsistent or confusing.
 
 This needs a refactor, but unknown if I will get to it before I move back to rust
 where this code probably should live for reals.

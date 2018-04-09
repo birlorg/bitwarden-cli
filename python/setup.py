@@ -6,7 +6,7 @@ import os
 
 from setuptools import setup
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 
 
 def readme():
@@ -34,6 +34,16 @@ setup(
     license="MIT",
     url="https://fossil.birl.ca/bitwarden-cli/doc/trunk/README.txt",
     classifiers=[],
+    install_requires=[
+        "click==6.7",
+        "cryptography==2.2.2",
+        "objectpath==0.5",
+        "psutil==5.4.3",
+        "pystandardpaths==0.3.2",
+        "records==0.5.2",
+        "requests==2.18.4",
+        "tablib==0.12.1",
+    ],
     # install_requires=read_requirements('requirements.txt'),
     tests_require=read_requirements('requirements-tests-py3.txt'),
     packages=[

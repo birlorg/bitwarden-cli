@@ -5,6 +5,10 @@ This repo houses both python and rust versions.
 STATUS: python version works, rust version does not fully work yet (pull
 requests, patches, etc welcome) 
 	patches, bug reports and code welcome.
+	the python version is meant as an MVP.
+	Unknown at this time if the python version will just call out to rust
+	or if rust will entirely replace python.
+	at the very least the agent should exist in rust, and not python.
 
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home 
 But is mirrored to github: 
@@ -156,19 +160,21 @@ It will output LOTS
 of stuff, some of it is security sensitive, so be careful when you copy/paste
 the logs.
 
+either email or reach out via fossil or github tickets.
+
 
 --------------------------------
 TODO planned(code welcome):
 
- * finish off minimal implementation of the python version (search, add, etc)
- * build and release executables for mac and windows. build Makefile to automate
+ * Finish off minimal implementation(MVP) of the python version (add, etc)
+ * Build and release executables for mac and windows. build Makefile to automate
    this.
- * finish off rust crypto and agent, port python version to use rust crypto and
+ * Finish off rust crypto and agent, port python version to use rust crypto and
    agent
- * add server support (i.e. can also act like a server, so you could for
+ * Add server support (i.e. can also act like a server, so you could for
    instance have your local browser and desktop talk locally and work 100%
    off-line)
- * fix up documentation in
+ * Fix up documentation in
    HTML(http://fossil-scm.org/index.html/doc/trunk/www/embeddeddoc.wiki) and
    make prettier.
 
@@ -176,12 +182,31 @@ TODO planned(code welcome):
 Goals:
   * be a useful bitwarden tool that works on openBSD, debian, macOS and windows
     since these are the platforms I spend most of my time on.  UI is abysmal,
-    thanks to @kspearrin for doing that slog, go pay him.
-  * be able to work off-line completely if you wish. (slab mode already does
-    this..mostly)
+    thanks to @kspearrin for doing that slog, go pay him, I do.
+  * Be able to work off-line completely if you wish. This mostly works now.
 
 Non-Goals:
  * GUI's because writing them is misery. @kspearrin has this well-handled! YAY!
 
+
+The idea behind the CLI here is to think of the server as a place to push / pull
+againt.  The local copy of the DB should be resilient and not erase anything
+ever without explicitly saying so, so tat full historic backups are possible.
+think more like revision control. This is not fully fleshed out, at the time
+of this writing..
+
+
 -----------
-email: bitwarden <at> birl.ca
+
+Contributing:
+	If you use fossil, just send me a place to pull from or setup a login
+	and email/contact me and I will give you push rights.
+	if you refuse to use fossil, you can email me patches.
+	Or you can use github and pull-requests, I guess.
+
+	all contributions are copytight you and presumed licensed under the same 
+	license as the existing code in the repo (MIT), unless explicitly 
+	spelled out beforehand. Code contributions not licensed MIT may not be
+	accepted, without a conversation.
+
+email: bitwarden @at@ birl.ca
