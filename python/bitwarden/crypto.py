@@ -100,11 +100,12 @@ def unpad(s):
     """unpad encryption"""
     # return s[:-ord(s[len(s) - 1:])]
     # log.debug("unpad before:%s", s)
-    ret = s.replace('\x06', '')
-    ret = ret.replace('\x01', '')
-    ret = ret.replace('\x0b','')
+    padChars = ('\x06', '\x0b', '\u000e', '\u00010', '\u0002','\b',
+                "\n", '\t', '\r', '\f', '\u0007')
+    for c in padChars:
+        s = s.replace(c, '')
     # log.debug("unpad after:%s", ret)
-    return ret
+    return s
 
 
 def pad(blockSize, s):

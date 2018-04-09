@@ -1,4 +1,5 @@
 import base64
+import functools
 import os
 import inspect
 import pprint
@@ -226,10 +227,12 @@ class Config():
         """setter for agent_port"""
         return self.set('agent_port', int(value))
 
-    @property
-    def master_key(self):
+    @functools.lru_cache(2)
+    def get_master_key(self):
         """
-        master key that decrypts information.
+        we cache this call, so we can cache the master_key in process, 
+        so decryption goes WAY faster, since we do not have to call out
+        to the agent every time we want to decrypt.
         """
         ret = None
         try:
@@ -249,6 +252,13 @@ class Config():
             log.error("expected master_key but agent returned:%s",
                       pprint.pformat(ret))
         return ret
+
+    @property
+    def master_key(self):
+        """
+        master key that decrypts information.
+        """
+        return self.get_master_key()
 
     def isAgentRunning(self):
         """return pid if agent is running, else None

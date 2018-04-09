@@ -11,7 +11,7 @@ VERSION = "0.2.1"
 
 def readme():
     """ Load the contents of the README file """
-    readme_path = os.path.join(os.path.dirname(__file__), "README.md")
+    readme_path = os.path.join(os.path.dirname(__file__), '..', "README.txt")
     with open(readme_path, "r") as f:
         return f.read()
 
@@ -28,11 +28,11 @@ setup(
     name="bitwarden",
     version=VERSION,
     author="Birl.org developers",
-    author_email="tara@birl.org",
+    author_email="bitwarden@birl.org",
     description="A Python implementation and CLI for bitwarden",
     long_description=readme(),
     license="MIT",
-    url="",
+    url="https://fossil.birl.ca/bitwarden-cli/doc/trunk/README.txt",
     classifiers=[],
     #install_requires=read_requirements('requirements.txt'),
     tests_require=read_requirements('requirements-tests-py3.txt'),

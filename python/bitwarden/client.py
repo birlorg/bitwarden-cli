@@ -121,7 +121,7 @@ class Client(object):
     def fetchName(self, name, pwonly, decrypt, fulldecrypt):
         """
         """
-        ret = self.find(name, nameOnly = True)
+        ret = self.find(name, nameOnly=True)
         if not ret:
             return
         if len(ret) > 1:
@@ -144,7 +144,7 @@ class Client(object):
             log.error("unimplemented")
         elif fulldecrypt:
             log.error("unimplemented")
-        else: 
+        else:
             ret = json.dumps(
                 data,
                 indent=4, sort_keys=True, ensure_ascii=False
@@ -156,15 +156,20 @@ class Client(object):
         ciphers = self.db.query("select uuid, name, uri from ciphers")
         results = []
         for cipher in ciphers:
-            c = {}
+            c = {
+                'uuid': None,
+                'name': None,
+                'uri': None
+            }
             c['uuid'] = cipher['uuid']
             c['name'] = self._decrypt(cipher['name'])
             if query in c['name']:
                 results.append(c)
             if not nameOnly:
-                c['uri'] = self._decrypt(cipher['uri'])
-                if query in c['uri']:
-                    results.append(c)
+                if cipher['uri']:
+                    c['uri'] = self._decrypt(cipher['uri'])
+                    if query in c['uri']:
+                        results.append(c)
         return results
 
     def slab(self):
@@ -226,6 +231,10 @@ class Client(object):
         if not self.config.encryption_key:
             self.config.encryption_key = EncryptedEncryptionKey
         for cipher in ret['Ciphers']:
+            try:
+                uri = cipher['Data']['Uri']
+            except KeyError:
+                uri = None
             uuid = cipher['Id']
             update = self.db.query(
                 "select uuid from ciphers where uuid=:uuid", uuid=uuid).first()
@@ -234,6 +243,6 @@ class Client(object):
             else:
                 qry = "insert into ciphers (uuid,  name, uri, json, created_at, updated_at) VALUES (:uuid, :name,:uri,:json,DATETIME('NOW'),DATETIME('NOW'))"
             self.db.query(qry, uuid=uuid, name=cipher['Name'],
-                          uri=cipher['Data']['Uri'], json=json.dumps(cipher))
+                          uri=uri, json=json.dumps(cipher))
         self.config.last_sync_time = time.asctime()
         return "pull finished"

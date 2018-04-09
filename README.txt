@@ -50,7 +50,10 @@ Usage: bitwarden find [OPTIONS] QUERY
 
   find query in username,uri
 
-   this does a simpe python string find i.e.:      if query in username:
+   this does a simpe python string find i.e.:
+
+       if query in username:
+
    but searches against username and first url
 
    You can export it in almost any format you wish with -f
@@ -61,8 +64,8 @@ Usage: bitwarden find [OPTIONS] QUERY
 
     bw find example.com -f tsv --no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p
 
-  which means: find all entries with example.com in them, use fzf to
-  select a record and return only the password.
+  which means: find all entries with example.com in them, use fzf to select
+  a record and return only the password.
 
 Options:
   -f, --format [csv|tsv|json|yaml|html|xls|xlsx|dbf|latex|ods]

@@ -228,7 +228,9 @@ def find(cli, query, format, headers):
     """find query in username,uri
 
     this does a simpe python string find i.e.:
+
         if query in username:
+
     but searches against username and first url
 
     You can export it in almost any format you wish with -f
@@ -249,7 +251,10 @@ def find(cli, query, format, headers):
         if headers:
             d.headers = ret[0].keys()
         for row in ret:
-            d.append(row.values())
+            try:
+                d.append(row.values())
+            except tablib.core.InvalidDimensions:
+                log.error("can not add row:%s", row)
         if format:
             click.echo(d.export(format))
         else:
