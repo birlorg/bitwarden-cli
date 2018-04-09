@@ -1,5 +1,14 @@
 """
 Bitwarden crypto functions.
+
+Yes, this code is UGLY, The documentation is either missing, inconsistent or confusing.
+
+This needs a refactor, but unknown if I will get to it before I move back to rust
+where this code probably should live for reals.
+
+See tests/test_bitwarden.py if you want to make sense of this ugly.
+refactors are welcome.
+
 """
 import base64
 import os
@@ -97,10 +106,17 @@ def macsEqual(mac1, mac2):
 
 
 def unpad(s):
-    """unpad encryption"""
+    """unpad encryption.
+    Clearly I don't understand how bitwarden does this.
+    the desktop and browser code do not talk about it, so it must
+    be done at a lower level, but i have yet to track down that code.
+    and python clearly doesn't do it for me, so either the python 
+    peeps don't get it either, or there is some confusion somehwere.
+
+    """
     # return s[:-ord(s[len(s) - 1:])]
     # log.debug("unpad before:%s", s)
-    padChars = ('\x06', '\x0b', '\u000e', '\u00010', '\u0002','\b',
+    padChars = ('\x06', '\x0b', '\u000e', '\u00010', '\u0002', '\b',
                 "\n", '\t', '\r', '\f', '\u0007')
     for c in padChars:
         s = s.replace(c, '')
