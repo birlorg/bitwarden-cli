@@ -112,11 +112,15 @@ def login(cli, email, password, timeout):
         $ bitwarden login nobody@example.com
         Password:
 
-        self hosted:
+        self hosted (bitwarden-ruby or bitwarden-go):
+
+        login to a self-hosted bitwarden-ruby or bitwarden-go server @ bitwarden.example.com URL. with an 8hr agent timeout(so you can work offline all day).
+
         bitwarden --url https://bitwarden.example.com/api --identurl https://bitwarden.example.com/identity login nobody@example.com --timeout 28800
 
-        login to a self-hosted bitwarden-ruby or bitwarden-go server @ bitwarden.example.com URL.
-        timeout of the agent set to 8hrs. (so you can work offline all day)
+        self hosted bitwarden proper:
+
+            unknown at this time. 
 
     NOTES:
         * if you login to a self-hosted instance, you *MUST* set both
