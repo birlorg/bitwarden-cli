@@ -15,6 +15,8 @@ import bitwarden.client as client
 import standardpaths  # https://github.com/uranusjr/pystandardpaths
 import tablib  # http://docs.python-tablib.org/en/master/
 
+click.disable_unicode_literals_warning = True
+
 logging.basicConfig()
 log = logging.getLogger(__name__)
 bitwarden_log = logging.getLogger("bitwarden")
@@ -170,7 +172,26 @@ def status(cli):
 @cli.command()
 @click.pass_obj
 def slab(cli):
-    """run in slab mode."""
+    """run in slab mode.
+
+    iterm2 coprocess command:
+
+export LANG=en_CA.UTF-8;export LOCALE=en_CA.UTF-8; /usr/local/bin/bitwarden slab
+
+    You may need to change the LOCAL and LANG settings and the path above.
+
+        which bitwarden
+
+    should get you the path. and echo $LANG should get you the locale and lang
+    settings.
+
+    slab mode searches and displays only uri's that equal:
+    sudolikeaboss://local
+
+    I recommend: brew install choose-gui. and then bitwarden slab will be all
+    the more amazing. more info on the chooser here:
+    https://github.com/sdegutis/choose
+    """
     cli.client.slab()
 
 

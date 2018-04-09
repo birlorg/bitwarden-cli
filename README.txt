@@ -92,6 +92,12 @@ much easier by allowing you to access your bitwarden passwords on the terminal.
 All you need is iterm2, bitwarden, a mac, and a dream." - from:
 https://github.com/ravenac95/sudolikeaboss
 
+slab command for iTerm2: 
+
+export LANG=en_US.UTF-8;export LOCALE=en_US.UTF-8; /usr/local/bin/bitwarden slab
+
+if you speak a different language, change the LOCALE and LANG settings above.
+
 We support self-hosted installations just pass --url and --identurl The url will
 be saved indefinitely, you do not need to set it every time (not even when you
 login again, it will be remembered) see bw login --help for details.

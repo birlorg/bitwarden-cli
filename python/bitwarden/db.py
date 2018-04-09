@@ -244,6 +244,7 @@ class Config():
                 key = r.json()
             except json.decoder.JSONDecodeError:
                 log.error("problem json decoding:%s", r.text)
+                return None
         except requests.exceptions.ConnectionError:
             log.error("agent not running, you must login.")
         try:
