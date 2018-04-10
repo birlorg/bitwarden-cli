@@ -112,12 +112,6 @@ def macsEqual(mac1, mac2):
 def decryptEncryptionKey(cipherString, key):
     """decryptEncryptionKey
     returns encryptionKey and macKey
-
-
-    Remove the PKCS#7 padding from a text string
-    https://tools.ietf.org/html/rfc2315#section-10.3
-    section 2
-
     """
     encryptionType, iv, cipherText, mac = decodeCipherString(cipherString)
     # log.debug("mac:%s",  mac)
@@ -136,6 +130,9 @@ def decryptEncryptionKey(cipherString, key):
 
 def decrypt(cipherString, key, macKey, decode=True):
     """decrypt a CipherString and return plaintext
+    Remove the PKCS#7 padding from a text string
+    https://tools.ietf.org/html/rfc2315#section-10.3
+    section 2
     """
     encryptionType, iv, ct, mac = decodeCipherString(cipherString)
     if encryptionType != 2:
