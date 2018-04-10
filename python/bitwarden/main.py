@@ -386,18 +386,26 @@ def logout(cli):
 
 
 @cli.command()
+@click.option(
+    '--fmt',
+    "-f",
+    type=click.Choice([
+        'csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex',
+        'ods'
+    ]),
+    required=False,
+    default=None)
 @click.argument("key", required=False)
 @click.argument("value", required=False)
 @click.pass_obj
-def config(cli, key, value):
-    """
-    view and set bitwarden config items.
+def config(cli, key, value, fmt):
+    """View and set bitwarden config items.
 
-    config with no arguments will list all keys and their values.
-    config with 1 argument will show the value for that key 
-    and config with 2 args will set a value for that key.
+    no arguments will list all keys and their values. 
+    1 argument will show the value for that key
+    with 2 args will set a value for that key.
 
-    2 items are not shown in the all list, because their values are sensitive:
+    2 items are not shown in the all list, because their values are "sensitive":
     ('client_token', 'encryption_key')
 
     client_token is the JSON value returned from the login command and
@@ -408,23 +416,35 @@ def config(cli, key, value):
     values) but setting the values by hand is almost always a bad idea, you
     have been warned.
 
-EXAMPLES:    
+    You can of course format the output any way you so choose.
+    Why you would want the output in XLS format is beyond me.
 
-    \b
-    bitwarden config email
-    key  |value
+\b
+NOTES: 
+----------
+
+Default values are computed at runtime and are not shown here.
+
+\b
+EXAMPLES:    
+----------------
+
+\b
+bitwarden config email
+key  |value
 -----|------------
 email|nobody@example.com
 
 show the email setting.
 
-    \b
-    bitwarden config email somebodylovesme@example.com
-    key  |old value         |new value
-    -----|------------------|---------------------------
-    email|nobody@example.com|somebodylovesme@example.com
+\b
+bitwarden config email somebodylovesme@example.com
+key  |old value         |new value
+-----|------------------|---------------------------
+email|nobody@example.com|somebodylovesme@example.com
 
-    will set the login email to nobody@example.com
+will set the login email to nobody@example.com
+
    """
     skip = ('isAgentRunning', 'one', 'get', 'set', 'scalar')
     skipAllList = skip + ('client_token', 'encryption_key')
@@ -448,6 +468,10 @@ show the email setting.
     else:
         for key in dir(cli.config):
             if key.startswith('__') or key in skipAllList:
+                log.debug("skipping from list:%s", key)
                 continue
             dataset.append((key, cli.config.get(key)))
-    click.echo(dataset)
+    if fmt:
+        click.echo(dataset.export(fmt))
+    else:
+        click.echo(dataset)
