@@ -138,14 +138,14 @@ def login(cli, email, password, timeout):
 @cli.command()
 @click.confirmation_option(prompt='Are you sure you want to empty the db?')
 @click.pass_obj
-def deletedb(cli):
-    """***THIS ERASES DATA*** Flush and empty the database of all values.
+def emtpydb(cli):
+    """Flush and empty the database of all values.
 
     ***THIS ERASES DATA***
 
     This gives you a nice clean fresh feeling, and erases all values
     including any configuration and settings.
-    so be *CAREFUL* and *SURE* you want to do this, before
+    so be *CAREFUL* and be *SURE* you want to do this, before
     doing so.
 
     ***THIS ERASES DATA***
