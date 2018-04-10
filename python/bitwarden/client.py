@@ -207,6 +207,9 @@ class Client(object):
                     choiceMap[name] = row['uuid']
         log.debug("choices:%s", choices)
         selected = slab.choice(choices)
+        if not selected:
+            log.debug("no choice selected")
+            return None
         selectedUUID = choiceMap[selected]
         row = self.db.query(
             "select json from ciphers where uuid=:uuid", uuid=selectedUUID).first()

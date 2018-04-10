@@ -233,11 +233,14 @@ class Config():
         we cache this call, so we can cache the master_key in process, 
         so decryption goes WAY faster, since we do not have to call out
         to the agent every time we want to decrypt.
+        This doesn't really affect security, since this code is only running
+        long enough to do it's decryption and then exits.
+        and code that doesn't need to decrypt stuff will never call us.
         """
         ret = None
         try:
             r = requests.post("http://127.0.0.1:{}".format(self.agent_port),
-                              json={'key': self.agent_token})
+                              json={'key': self.agent_token, 'exit': False})
             if r.status_code != 200:
                 log.error(r.text)
             try:
@@ -291,10 +294,12 @@ class Config():
         agent_token = base64.b64encode(os.urandom(16)).decode('utf-8')
         cmd = [self.agent_location, '127.0.0.1:{}'.format(self.agent_port)]
         log.debug("running agent:%s", cmd)
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                             stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         data = {
             'master_key': key,
-            'agent_token': agent_token
+            'agent_token': agent_token,
+            'port': self.agent_port
         }
         timeout = self.agent_timeout
         if timeout > 0:

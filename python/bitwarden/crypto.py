@@ -10,6 +10,10 @@ where this code probably should live for reals.
 See tests/test_bitwarden.py if you want to make sense of this ugly.
 refactors are welcome.
 
+docs on how this all works: https://help.bitwarden.com/crypto.html
+and https://github.com/jcs/bitwarden-ruby/blob/master/API.md
+
+
 """
 import base64
 import binascii
@@ -165,7 +169,7 @@ def encrypt(pt, key, macKey):
     if not hasattr(pt, 'decode'):
         pt = bytes(pt, 'utf-8')
     padder = padding.PKCS7(128).padder()
-    pt = padder.update() + padder.finalize()
+    pt = padder.update(pt) + padder.finalize()
     iv = os.urandom(16)
     #key = hashlib.sha256(key).digest()
     cipher = cryptography.hazmat.primitives.ciphers.Cipher(

@@ -5,6 +5,7 @@ authors = ["Birl.org"]
 publish = false
 
 [dependencies]
+daemonize = "^0.3"
 rust-crypto = "^0.2"
 rand = "^0.4"
 rustc-serialize = "^0.3"

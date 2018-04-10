@@ -197,7 +197,7 @@ Non-Goals:
 
 The idea behind the CLI here is to think of the server as a place to push / pull
 againt.  The local copy of the DB should be resilient and not erase anything
-ever without explicitly saying so, so tat full historic backups are possible.
+ever without explicitly saying so, so that full historic backups are possible.
 think more like revision control. This is not fully fleshed out, at the time
 of this writing..
 
@@ -205,14 +205,20 @@ of this writing..
 -----------
 
 Contributing:
-	If you use fossil, just send me a place to pull from or setup a login
-	and email/contact me and I will give you push rights.
-	if you refuse to use fossil, you can email me patches.
-	Or you can use github and pull-requests, I guess.
 
-	all contributions are copytight you and presumed licensed under the same 
-	license as the existing code in the repo (MIT), unless explicitly 
-	spelled out beforehand. Code contributions not licensed MIT may not be
-	accepted, without a conversation.
+If you use fossil, just send me a place to pull from or setup a login and
+email/contact me and I will give you push rights.  if you refuse to use fossil,
+you can email me patches.  Or you can use github and pull-requests, I guess.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you shall be dual licensed as above, without any
+additional terms or conditions.
+
+License
+
+Licensed under either of
+
+    Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+    MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT) at your option.
 
 email: bitwarden @at@ birl.ca
