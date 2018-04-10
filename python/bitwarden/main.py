@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 """
 http://click.pocoo.org/5/complex/#building-a-git-clone
-pylint: disable=W191
+pylint: disable=W191,WO621
 """
 import os
-import json
 import logging
 import sys
 
 # pylint: disable=E0401
 import click
-import bitwarden.db
-import bitwarden.crypto as crypto
-import bitwarden.client as client
 import standardpaths  # https://github.com/uranusjr/pystandardpaths
 import tablib  # http://docs.python-tablib.org/en/master/
+import bitwarden.db
+import bitwarden.client as client
 
 click.disable_unicode_literals_warning = True
 
@@ -24,8 +22,8 @@ bitwarden_log = logging.getLogger("bitwarden")
 bitwarden_log.setLevel(logging.INFO)
 bitwarden_log.propagate = True
 
-standardpaths.configure(application_name='bitwarden',
-                        organization_name='birl.org')
+standardpaths.configure(
+    application_name='bitwarden', organization_name='birl.org')
 
 
 class CLI():
@@ -51,8 +49,10 @@ class CLI():
 
 @click.group()
 # default for URL is in the db.py file, so it will not be changed if already set..
-@click.option('--url', envvar='BITWARDEN_URL', required=False, default=None)
-@click.option('--identurl', envvar='BITWARDEN_IDENT_URL', required=False, default=None)
+@click.option(
+    '--url', envvar='BITWARDEN_URL', required=False, default=None)
+@click.option(
+    '--identurl', envvar='BITWARDEN_IDENT_URL', required=False, default=None)
 @click.option('--debug/--no-debug', default=False, envvar='DEBUG')
 @click.option('--db', envvar='BITWARDEN_DB', default=None)
 @click.version_option()
@@ -68,7 +68,6 @@ def cli(ctx, url, identurl, debug, db):
             os.makedirs(writePath)
             os.chmod(writePath, 0o0700)
         if not os.path.exists(filePath):
-            # pylint: disable=E501
             msg = "Database does not exist." + os.linesep
             msg += "You can use Liquibase and generate it," + os.linesep
             msg += "or for the lazy:" + os.linesep
@@ -96,13 +95,15 @@ def register(cli, email, password, name, hint):
 @click.argument('email', required=False)
 @click.option('--timeout', "-t", default=0)
 @click.option('--password', prompt=True, hide_input=True)
-@click.option('--mfa', type=click.Choice(
-    ['u2f', 'yubikey', 'duo', 'authenticator', 'email']),
-    required=False, default=None)
+@click.option(
+    '--mfa',
+    type=click.Choice(['u2f', 'yubikey', 'duo', 'authenticator', 'email']),
+    required=False,
+    default=None)
 @click.option('--mfa_token', required=False, default=None)
 @click.pass_obj
 def login(cli, email, password, timeout, mfa, mfa_token):
-    """login to server.
+    """login to server; MFA optional.
 
     --timeout is how long the agent should run for in seconds.
     By default (value of 0) timeout will be set to the length of the login
@@ -112,6 +113,11 @@ def login(cli, email, password, timeout, mfa, mfa_token):
 
     email is optional, as it remembers the email from previous logins.
 
+MFA Support:
+    --mfa is optional, if you turn it on and don't specify --mfa_token it will
+    prompt you.  None of these modes do anything
+    other than let you specify the MFA token to send. so DUO and email may not work.
+    
     example:
         $ bitwarden login nobody@example.com
         Password:
@@ -173,8 +179,8 @@ def status(cli):
         bw status | grep PID | cut -f 2
     """
     stats = {}
-    stats['Password Entries '] = str(cli.db.query(
-        "select count() as count from ciphers").first()['count'])
+    stats['Password Entries '] = str(
+        cli.db.query("select count() as count from ciphers").first()['count'])
     stats['Agent Location   '] = cli.config.agent_location
     stats['Last Sync Time   '] = str(cli.config.last_sync_time)
     stats['Database Location'] = cli.dbURL.replace('sqlite:///', '')
@@ -257,12 +263,18 @@ def fetch_name(cli, name, pwonly, decrypt, fulldecrypt):
 
 @cli.command()
 @click.pass_obj
-@click.option('--format', "-f", type=click.Choice(
-    ['csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex', 'ods']),
-    required=False, default=None)
+@click.option(
+    '--fmt',
+    "-f",
+    type=click.Choice([
+        'csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex',
+        'ods'
+    ]),
+    required=False,
+    default=None)
 @click.option('--headers/--no-headers', default=True)
 @click.argument("query", required=True)
-def find(cli, query, format, headers):
+def find(cli, query, fmt, headers):
     """find query in username,uri
 
     this does a simpe python string find i.e.:
@@ -273,45 +285,53 @@ def find(cli, query, format, headers):
 
     You can export it in almost any format you wish with -f
 
-    to get the password once you found an entry use fetch_uuid 
+    to get the password once you found an entry use fetch_uuid
 
     complicated example:
 
     \b
     bw find example.com -f tsv --no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p
 
-   which means: find all entries with example.com in them, use fzf
+   which means: find all entries with example.com in them, using fzf
    to select a record and return only the password.
     """
     ret = cli.client.find(query)
     if ret:
-        d = tablib.Dataset()
+        dataset = tablib.Dataset()
         if headers:
-            d.headers = ret[0].keys()
+            dataset.headers = ret[0].keys()
         for row in ret:
             try:
-                d.append(row.values())
+                dataset.append(row.values())
             except tablib.core.InvalidDimensions:
                 log.error("can not add row:%s", row)
-        if format:
-            click.echo(d.export(format))
+        if fmt:
+            click.echo(dataset.export(fmt))
         else:
-            click.echo(d)
+            click.echo(dataset)
 
 
 @cli.command()
 @click.pass_obj
 @click.argument("query", required=True)
 @click.option("--params", "-p", required=False, multiple=True)
-@click.option('--format', "-f", type=click.Choice(
-    ['csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex', 'ods']),
-    required=False, default=None)
-def sql(cli, query, params, format):
+@click.option(
+    '--fmt',
+    "-f",
+    type=click.Choice([
+        'csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex',
+        'ods'
+    ]),
+    required=False,
+    default=None)
+def sql(cli, query, params, fmt):
     """query the local data store using SQL.
 
-    Basically just a wrapper around the records CLI.
+    Basically just a wrapper around the records CLI
+    see https://github.com/kennethreitz/records for more info.
 
-    you can get the results back in pretty much any format you wish:
+    you can get the results back in pretty much any format you wish
+    with --fmt:
     ['csv', 'tsv', 'json', 'yaml', 'html', 'xls', 'xlsx', 'dbf', 'latex', 'ods']),
 
     Query: can either be a filename to run or a SQL query string.
@@ -340,10 +360,10 @@ def sql(cli, query, params, format):
     # Execute the query as a string.
     else:
         rows = cli.db.query(query, **params)
-    if format is None:
+    if fmt is None:
         print(rows.dataset)
     else:
-        print(rows.export(format))
+        print(rows.export(fmt))
     return
 
 
@@ -363,3 +383,71 @@ def logout(cli):
     cli.config.master_key = None
     cli.config.token = None
     print("logged out, forgotten master_key and remote access_token.")
+
+
+@cli.command()
+@click.argument("key", required=False)
+@click.argument("value", required=False)
+@click.pass_obj
+def config(cli, key, value):
+    """
+    view and set bitwarden config items.
+
+    config with no arguments will list all keys and their values.
+    config with 1 argument will show the value for that key 
+    and config with 2 args will set a value for that key.
+
+    2 items are not shown in the all list, because their values are sensitive:
+    ('client_token', 'encryption_key')
+
+    client_token is the JSON value returned from the login command and
+    encryption key is the encypted symmetric key (requires the master key to
+    decrypt, which is stored in the agent)
+
+    You can view these if you specifically ask for them (and even set their
+    values) but setting the values by hand is almost always a bad idea, you
+    have been warned.
+
+EXAMPLES:    
+
+    \b
+    bitwarden config email
+    key  |value
+-----|------------
+email|nobody@example.com
+
+show the email setting.
+
+    \b
+    bitwarden config email somebodylovesme@example.com
+    key  |old value         |new value
+    -----|------------------|---------------------------
+    email|nobody@example.com|somebodylovesme@example.com
+
+    will set the login email to nobody@example.com
+   """
+    skip = ('isAgentRunning', 'one', 'get', 'set', 'scalar')
+    skipAllList = skip + ('client_token', 'encryption_key')
+    dataset = tablib.Dataset()
+    old = None
+    if value:
+        dataset.headers = ("key", "old value", "new value")
+    else:
+        dataset.headers = ("key", "value")
+    if key:
+        log.debug("looking up value for %s", key)
+        if not key.startswith('__') and key not in skip:
+            if value:
+                old = cli.config.get(key)
+                cli.config.set(key, value)
+            if key in dir(cli.config):
+                if value:
+                    dataset.append((key, old, value))
+                else:
+                    dataset.append((key, cli.config.get(key)))
+    else:
+        for key in dir(cli.config):
+            if key.startswith('__') or key in skipAllList:
+                continue
+            dataset.append((key, cli.config.get(key)))
+    click.echo(dataset)

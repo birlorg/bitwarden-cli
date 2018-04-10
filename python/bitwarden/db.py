@@ -1,3 +1,7 @@
+"""
+Database and configuration code.
+
+"""
 import base64
 import functools
 import os
@@ -23,6 +27,7 @@ log.propagate = True
 
 
 class UnimplementedError(Exception):
+    """for when I was too lazy"""
     pass
 
 
