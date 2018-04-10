@@ -25,7 +25,13 @@ log.propagate = True
 
 standardpaths.configure(application_name='bitwarden',
                         organization_name='birl.org')
-
+mfa_map = {
+        'u2f': 4,
+        'yubikey': 3,
+        'duo': 2,
+        'authenticator': 0,
+        'email': 1
+        }
 
 class Client(object):
     def __init__(self, db, debug):
@@ -57,11 +63,11 @@ class Client(object):
         log.debug("registering to: %s with:%s", url, pprint.pformat(data))
         return requests.post(url, json=data)
 
-    def login(self, email, password, timeout):
+    def login(self, email, password, timeout, mfa, mfa_token):
         if not email:
             email = self.config.email
             if not email:
-                log.error("Must give an email address, not in config.")
+                log.error("Must give an email address, when not in config.")
         else:
             self.config.email = email
         masterKey = crypto.makeKey(password, email)
@@ -81,6 +87,10 @@ class Client(object):
             "deviceName": "firefox",
             "devicePushToken": ""
         }
+        if mfa:
+            data["twoFactorToken"] = str(mfa_token)
+            data["twoFactorProvider"] = mfa_map[mfa]
+            data["towFactorRemember"] = 1
         log.debug("POST %s data of:%s", url, pprint.pformat(data))
         r = requests.post(url, data=data)
         # log.debug("returning:%s", r.text)

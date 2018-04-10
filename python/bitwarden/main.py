@@ -93,11 +93,15 @@ def register(cli, email, password, name, hint):
 
 
 @cli.command()
-@click.argument('email', required=True)
+@click.argument('email', required=False)
 @click.option('--timeout', "-t", default=0)
 @click.option('--password', prompt=True, hide_input=True)
+@click.option('--mfa', type=click.Choice(
+    ['u2f', 'yubikey', 'duo', 'authenticator', 'email']),
+    required=False, default=None)
+@click.option('--mfa_token', required=False, default=None)
 @click.pass_obj
-def login(cli, email, password, timeout):
+def login(cli, email, password, timeout, mfa, mfa_token):
     """login to server.
 
     --timeout is how long the agent should run for in seconds.
@@ -131,7 +135,9 @@ def login(cli, email, password, timeout):
             to define them one time.
     """
     # log.debug("login as:%s", email)
-    cli.client.login(email, password, timeout)
+    if mfa and not mfa_token:
+        mfa_token = click.prompt('Please enter your token')
+    cli.client.login(email, password, timeout, mfa, mfa_token)
     del password
 
 
@@ -225,6 +231,7 @@ def fetch_uuid(cli, uuid, pwonly, decrypt, fulldecrypt):
     """
     click.echo(cli.client.fetchUUID(uuid, pwonly, decrypt, fulldecrypt))
 
+
 @cli.command()
 @click.option('--pwonly', "-p", is_flag=True, default=False)
 @click.option('--decrypt/--no-decrypt', "-d", is_flag=True, default=False)
@@ -247,6 +254,7 @@ def fetch_name(cli, name, pwonly, decrypt, fulldecrypt):
     """
     click.echo(cli.client.fetchName(name, pwonly, decrypt, fulldecrypt))
 
+
 @cli.command()
 @click.pass_obj
 @click.option('--format', "-f", type=click.Choice(
@@ -268,7 +276,7 @@ def find(cli, query, format, headers):
     to get the password once you found an entry use fetch_uuid 
 
     complicated example:
-   
+
     \b
     bw find example.com -f tsv --no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p
 

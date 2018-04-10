@@ -137,6 +137,14 @@ class Config():
     @url.setter
     def url(self, value):
         return self.set('url', value)
+    @property
+    def email(self):
+        """bitwarden login email address."""
+        return self.get('email', os.getenv("EMAIL", None))
+
+    @email.setter
+    def email(self, value):
+        return self.set('email', value)
 
     @property
     def debug(self):
