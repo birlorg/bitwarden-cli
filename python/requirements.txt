@@ -1,0 +1,13 @@
+attrs==17.4.0 
+certifi==2018.1.18 
+click==6.7
+cryptography==2.2.2
+objectpath==0.5
+psutil==5.4.3
+pystandardpaths==0.3.2
+python-daemon==2.1.2
+pytz==2018.3
+records==0.5.2
+requests==2.18.4
+tablib==0.12.1
+git+https://github.com/webpy/webpy#egg=webpy
