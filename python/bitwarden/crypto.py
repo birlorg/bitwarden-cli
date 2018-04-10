@@ -12,6 +12,7 @@ refactors are welcome.
 
 """
 import base64
+import binascii
 import os
 import logging
 import hmac
@@ -22,6 +23,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hmac as Cipherhmac
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
 log = logging.getLogger(__name__)
 log.propagate = True
 
@@ -106,34 +108,16 @@ def macsEqual(mac1, mac2):
     return hmac1 == hmac2
 
 
-def unpad(s):
-    """unpad encryption.
-    Clearly I don't understand how bitwarden does this.
-    the desktop and browser code do not talk about it, so it must
-    be done at a lower level, but i have yet to track down that code.
-    and python clearly doesn't do it for me, so either the python 
-    peeps don't get it either, or there is some confusion somehwere.
-
-    """
-    # return s[:-ord(s[len(s) - 1:])]
-    # log.debug("unpad before:%s", s)
-    padChars = ('\x06', '\x0b', '\u000e', '\u00010', '\u0002', '\b',
-                "\n", '\t', '\r', '\f', '\u0007')
-    for c in padChars:
-        s = s.replace(c, '')
-    # log.debug("unpad after:%s", ret)
-    return s
-
-
-def pad(blockSize, s):
-    """pad encryption if needed"""
-    return s + (
-        blockSize - len(s) % blockSize) * chr(blockSize - len(s) % blockSize)
-
 
 def decryptEncryptionKey(cipherString, key):
     """decryptEncryptionKey
     returns encryptionKey and macKey
+
+
+    Remove the PKCS#7 padding from a text string
+    https://tools.ietf.org/html/rfc2315#section-10.3
+    section 2
+
     """
     encryptionType, iv, cipherText, mac = decodeCipherString(cipherString)
     # log.debug("mac:%s",  mac)
@@ -169,9 +153,11 @@ def decrypt(cipherString, key, macKey, decode=True):
         algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     plainText = decryptor.update(ct) + decryptor.finalize()
-    #log.debug("before unpad:%s", plainText)
+    # log.debug("before unpad:%s", plainText)
+    unpad = padding.PKCS7(128).unpadder()
+    plainText = unpad.update(plainText) + unpad.finalize()
     if decode:
-        return unpad(plainText.decode('utf-8'))
+        return plainText.decode('utf-8')
     return plainText
 
 
@@ -181,6 +167,8 @@ def encrypt(pt, key, macKey):
     """
     if not hasattr(pt, 'decode'):
         pt = bytes(pt, 'utf-8')
+    padder = padding.PKCS7(128).padder()
+    pt = padder.update() + padder.finalize()
     iv = os.urandom(16)
     #key = hashlib.sha256(key).digest()
     cipher = cryptography.hazmat.primitives.ciphers.Cipher(
