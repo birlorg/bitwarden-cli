@@ -6,7 +6,7 @@ import os
 
 from setuptools import setup
 
-VERSION = "0.2.4"
+VERSION = "0.3.0"
 
 
 def readme():

@@ -196,7 +196,10 @@ class Client(object):
 		for row in self.db.query(qry):
 			log.debug(row)
 			try:
-				url = crypto.decrypt(row['uri'], decryptedEncryptionKey,
+				if not row['uri']:
+					url = ''
+				else:
+					url = crypto.decrypt(row['uri'], decryptedEncryptionKey,
 				                     macKey)
 			except IOError:
 				data = self.db.query(

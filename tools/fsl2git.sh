@@ -4,5 +4,5 @@ cd ~/src/bitwarden/bitwarden-cli.git
 fossil export --git --import-marks ~/fossil/bitwarden-cli-fossil.marks  \
        --export-marks ~/fossil/bitwarden-cli-fossil.marks               \
        ~/fossil/bitwarden-cli.fossil | git fast-import            \
-       --import-marks=~/fossil/bitwarden-cli-git.marks                  \
-       --export-marks=~/fossil/bitwarden-cli-git.marks
+       --import-marks=/Users/zie/fossil/bitwarden-cli-git.marks                \
+       --export-marks=/Users/zie/fossil/bitwarden-cli-git.marks
