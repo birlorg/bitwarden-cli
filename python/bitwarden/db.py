@@ -191,6 +191,18 @@ class Config():
 		return self.set('last_sync_time', value)
 
 	@property
+	def slab_location(self):
+		"""path to executable for slab to run to choose an entry.."""
+		value = self.get('slab_location', None)
+		return value
+
+	@slab_location.setter
+	def agent_location(self, value):
+		"""setter"""
+		return self.set('slab_location', value)
+
+
+	@property
 	def agent_location(self):
 		"""path to agent executable.."""
 		value = self.get('agent_location', None)

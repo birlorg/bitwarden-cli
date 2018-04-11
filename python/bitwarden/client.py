@@ -217,7 +217,7 @@ class Client(object):
 					choices.append(name)
 					choiceMap[name] = row['uuid']
 		log.debug("choices:%s", choices)
-		selected = slab.choice(choices)
+		selected = slab.choice(choices, self.config.slab_location)
 		if not selected:
 			log.debug("no choice selected")
 			return None

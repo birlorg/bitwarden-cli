@@ -2,6 +2,18 @@
 # pylint: disable=W0621,C0103,W0312
 """
 http://click.pocoo.org/5/complex/#building-a-git-clone
+
+IDEAS/TODO:
+	move agent to not timeout, include agent stop and login commands(login would
+be an offline login just setting the master key).
+
+	maybe even a agent service command to enable/disable setting it up as a
+service in the OS (Launchd macOS windows Service, etc.)
+
+	Change slab to use setting slab_chooser so doing the FZF integration is as
+easy as bw config slab_chooser fzf plus then is cross platform.
+
+	Integrate with pymux (tmux would require upstream patches I believe.)?
 """
 import os
 import logging
@@ -139,7 +151,7 @@ MFA Support:
             so server operations may require you to re-login.
         * --url and --identurl are saved for you, so you only have
             to define them one time.
-    """
+    """ # yapf: disable
 	# LOG.debug("login as:%s", email)
 	if mfa and not mfa_token:
 		mfa_token = click.prompt('Please enter your token')
@@ -208,6 +220,12 @@ export LANG=en_CA.UTF-8;export LOCALE=en_CA.UTF-8; /usr/local/bin/bitwarden slab
 
     slab mode searches and displays only uri's that equal:
     sudolikeaboss://local
+
+	To use FZF:
+	\b
+	bw config slab_location `which fzf`
+
+	and it will work with fzf if you want. or  any other chooser.
 
     I recommend: brew install choose-gui. and then bitwarden slab will be all
     the more amazing. more info on the chooser here:

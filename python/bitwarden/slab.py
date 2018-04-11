@@ -48,23 +48,24 @@ def appleScriptChooser(choices):
     return out
 
 
-def chooseGUIChooser(choices):
+def genericChooser(choices, slab_location):
     """use choose gui for choices
-    https://github.com/sdegutis/choose
     """
     try:
-        out = subprocess.run(['/usr/local/bin/choose'], stdout=subprocess.PIPE,
+        out = subprocess.run(slab_location, stdout=subprocess.PIPE,
                              input='\n'.join(choices), universal_newlines=True)
     except:
         sys.exit()
     return out.stdout.strip()
 
 
-def choice(choices):
+def choice(choices, slab_location):
     """give user a choice of items, return selected item
     if choose-gui is installed, use that, otherwise fall back to applescript
     """
-    if os.path.exists('/usr/local/bin/choose'):
-        return chooseGUIChooser(choices)
+    if slab_location:
+        return genericChooser(choices, slab_location)
+    elif os.path.exists('/usr/local/bin/choose'):
+        return genericChooser(choices, '/usr/local/bin/choose')
     else:
         return appleScriptChooser(choices)

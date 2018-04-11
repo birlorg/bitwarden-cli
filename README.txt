@@ -94,7 +94,7 @@ https://github.com/ravenac95/sudolikeaboss
 
 slab command for iTerm2: 
 
-export LANG=en_US.UTF-8;export LOCALE=en_US.UTF-8; /usr/local/bin/bitwarden slab
+export LANG=en_CA.UTF-8;export LOCALE=en_CA.UTF-8; /usr/local/bin/bitwarden slab
 
 if you speak a different language, change the LOCALE and LANG settings above.
 
