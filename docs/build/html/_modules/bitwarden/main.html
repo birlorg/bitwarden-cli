@@ -1,0 +1,574 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>bitwarden.main &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for bitwarden.main</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># pylint: disable=W0621,C0103,W0312</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">http://click.pocoo.org/5/complex/#building-a-git-clone</span>
+
+<span class="sd">IDEAS/TODO:</span>
+<span class="sd">	move agent to not timeout, include agent stop and login commands(login would</span>
+<span class="sd">be an offline login just setting the master key).</span>
+
+<span class="sd">	maybe even a agent service command to enable/disable setting it up as a</span>
+<span class="sd">service in the OS (Launchd macOS windows Service, etc.)</span>
+
+<span class="sd">	Change slab to use setting slab_chooser so doing the FZF integration is as</span>
+<span class="sd">easy as bw config slab_chooser fzf plus then is cross platform.</span>
+
+<span class="sd">	Integrate with pymux (tmux would require upstream patches I believe.)?</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="c1"># pylint: disable=E0401</span>
+<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">import</span> <span class="nn">standardpaths</span>  <span class="c1"># https://github.com/uranusjr/pystandardpaths</span>
+<span class="kn">import</span> <span class="nn">tablib</span>  <span class="c1"># http://docs.python-tablib.org/en/master/</span>
+<span class="kn">import</span> <span class="nn">bitwarden.db</span>
+<span class="kn">import</span> <span class="nn">bitwarden.client</span> <span class="k">as</span> <span class="nn">client</span>
+
+<span class="n">click</span><span class="o">.</span><span class="n">disable_unicode_literals_warning</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">()</span>
+<span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">BITWARDEN_LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;bitwarden&quot;</span><span class="p">)</span>
+<span class="n">BITWARDEN_LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">BITWARDEN_LOG</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">standardpaths</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+    <span class="n">application_name</span><span class="o">=</span><span class="s1">&#39;bitwarden&#39;</span><span class="p">,</span> <span class="n">organization_name</span><span class="o">=</span><span class="s1">&#39;birl.org&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CLI"><a class="viewcode-back" href="../../internals.html#bitwarden.main.CLI">[docs]</a><span class="k">class</span> <span class="nc">CLI</span><span class="p">():</span>
+	<span class="sd">&quot;&quot;&quot;CLI class &quot;&quot;&quot;</span>
+
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">identurl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dbURL</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;initialize&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="n">debug</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
+			<span class="n">BITWARDEN_LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+			<span class="n">LOG</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+			<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;debug turned on&quot;</span><span class="p">)</span>
+		<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;db:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dbURL</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">bitwarden</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">dbURL</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">dbURL</span> <span class="o">=</span> <span class="n">dbURL</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">bitwarden</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
+		<span class="k">if</span> <span class="n">identurl</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">identurl</span> <span class="o">=</span> <span class="n">identurl</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+<span class="c1"># default for URL is in the db.py file, so it will not be changed if already set..</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--url&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;BITWARDEN_URL&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--identurl&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;BITWARDEN_IDENT_URL&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--debug/--no-debug&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;DEBUG&#39;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--db&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;BITWARDEN_DB&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">version_option</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span> <span class="nf">cli</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">identurl</span><span class="p">,</span> <span class="n">debug</span><span class="p">,</span> <span class="n">db</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Bitwarden CLI program.&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">db</span><span class="p">:</span>
+		<span class="n">writePath</span> <span class="o">=</span> <span class="n">standardpaths</span><span class="o">.</span><span class="n">get_writable_path</span><span class="p">(</span><span class="s1">&#39;app_local_data&#39;</span><span class="p">)</span>
+		<span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">writePath</span><span class="p">,</span> <span class="s1">&#39;bitwarden.sqlite&#39;</span><span class="p">)</span>
+		<span class="n">db</span> <span class="o">=</span> <span class="s2">&quot;sqlite:///</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">writePath</span><span class="p">):</span>
+			<span class="c1"># create config dir and make secure as possible.</span>
+			<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">writePath</span><span class="p">)</span>
+			<span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">writePath</span><span class="p">,</span> <span class="mo">0o0700</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filePath</span><span class="p">):</span>
+			<span class="n">download_url</span> <span class="o">=</span> <span class="s2">&quot;https://fossil.birl.ca/bitwarden-cli/doc/trunk/tools/bitwarden.sqlite&quot;</span>
+			<span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Database does not exist.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span>
+			<span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;You can use Liquibase and generate it,&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span>
+			<span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;or for the lazy:&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span>
+			<span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;curl -o </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span>
+			<span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">download_url</span><span class="p">))</span>
+			<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+	<span class="n">cli</span> <span class="o">=</span> <span class="n">CLI</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">identurl</span><span class="p">,</span> <span class="n">debug</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+	<span class="n">ctx</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">cli</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--password&#39;</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">hide_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--hint&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--name&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;USER&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">hint</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;register a new account on server.&quot;&quot;&quot;</span>
+	<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;registering as:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">hint</span><span class="p">)</span>
+	<span class="k">del</span> <span class="n">password</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--timeout&#39;</span><span class="p">,</span> <span class="s2">&quot;-t&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--password&#39;</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">hide_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--mfa&#39;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="s1">&#39;u2f&#39;</span><span class="p">,</span> <span class="s1">&#39;yubikey&#39;</span><span class="p">,</span> <span class="s1">&#39;duo&#39;</span><span class="p">,</span> <span class="s1">&#39;authenticator&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">]),</span>
+    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--mfa_token&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="n">mfa</span><span class="p">,</span> <span class="n">mfa_token</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;login to server; MFA optional.</span>
+
+<span class="sd">    --timeout is how long the agent should run for in seconds.</span>
+<span class="sd">    By default (value of 0) timeout will be set to the length of the login</span>
+<span class="sd">    access token defined by the server.</span>
+<span class="sd">    If set to a negative value (say -t -1) then the agent</span>
+<span class="sd">    will never stop, until you call the logout command.</span>
+
+<span class="sd">    email is optional, as it remembers the email from previous logins.</span>
+
+<span class="sd">MFA Support:</span>
+<span class="sd">    --mfa is optional, if you turn it on and don&#39;t specify --mfa_token it will</span>
+<span class="sd">    prompt you.  None of these modes do anything</span>
+<span class="sd">    other than let you specify the MFA token to send. so DUO and email may not work.</span>
+
+<span class="sd">    example:</span>
+<span class="sd">        $ bitwarden login nobody@example.com</span>
+<span class="sd">        Password:</span>
+
+<span class="sd">        self hosted (bitwarden-ruby or bitwarden-go):</span>
+
+<span class="sd">        login to a self-hosted server at bitwarden.example.com URL. With an</span>
+<span class="sd">        8hr agent timeout(so you can work offline all day).</span>
+
+<span class="sd">        bitwarden --url https://bitwarden.example.com/api --identurl</span>
+<span class="sd">        https://bitwarden.example.com/identity login nobody@example.com</span>
+<span class="sd">        --timeout 28800</span>
+
+<span class="sd">    NOTES:</span>
+<span class="sd">        * if you login to a self-hosted instance, you *MUST* set both</span>
+<span class="sd">        --url and --identurl see above example for likely settings.</span>
+<span class="sd">        * --timeout does not change the access token server timeout.</span>
+<span class="sd">            so server operations may require you to re-login.</span>
+<span class="sd">        * --url and --identurl are saved for you, so you only have</span>
+<span class="sd">            to define them one time.</span>
+<span class="sd">    &quot;&quot;&quot;</span> <span class="c1"># yapf: disable</span>
+	<span class="c1"># LOG.debug(&quot;login as:%s&quot;, email)</span>
+	<span class="k">if</span> <span class="n">mfa</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">mfa_token</span><span class="p">:</span>
+		<span class="n">mfa_token</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">prompt</span><span class="p">(</span><span class="s1">&#39;Please enter your token&#39;</span><span class="p">)</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">login</span><span class="p">(</span><span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="n">mfa</span><span class="p">,</span> <span class="n">mfa_token</span><span class="p">)</span>
+	<span class="k">del</span> <span class="n">password</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">confirmation_option</span><span class="p">(</span><span class="n">prompt</span><span class="o">=</span><span class="s1">&#39;Are you sure you want to empty the db?&#39;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">emtpydb</span><span class="p">(</span><span class="n">cli</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Flush and empty the database of all values.</span>
+
+<span class="sd">    ***THIS ERASES DATA***</span>
+
+<span class="sd">    This gives you a nice clean fresh feeling, and erases all values</span>
+<span class="sd">    including any configuration and settings.</span>
+<span class="sd">    so be *CAREFUL* and be *SURE* you want to do this, before</span>
+<span class="sd">    doing so.</span>
+
+<span class="sd">    ***THIS ERASES DATA***</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">cli</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">get_table_names</span><span class="p">():</span>
+		<span class="n">cli</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;delete from :tablename&quot;</span><span class="p">,</span> <span class="n">tablename</span><span class="o">=</span><span class="n">table</span><span class="p">)</span>
+		<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;all data erased from </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="n">cli</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Show various statistics.</span>
+
+<span class="sd">    Advanced examples:</span>
+<span class="sd">    get last sync time:</span>
+<span class="sd">        bw status | grep Sync| cut -f 2</span>
+<span class="sd">    get agent pid if it is running:</span>
+<span class="sd">        bw status | grep PID | cut -f 2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="n">stats</span> <span class="o">=</span> <span class="p">{}</span>
+	<span class="n">count</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;select count() as count from ciphers&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span>
+	<span class="n">stats</span><span class="p">[</span><span class="s1">&#39;Password Entries &#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
+	<span class="n">stats</span><span class="p">[</span><span class="s1">&#39;Agent Location   &#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">agent_location</span>
+	<span class="n">stats</span><span class="p">[</span><span class="s1">&#39;Last Sync Time   &#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">last_sync_time</span><span class="p">)</span>
+	<span class="n">stats</span><span class="p">[</span><span class="s1">&#39;Database Location&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">dbURL</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;sqlite:///&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+	<span class="n">stats</span><span class="p">[</span><span class="s1">&#39;Agent PID        &#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">isAgentRunning</span><span class="p">())</span>
+	<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">stats</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+		<span class="n">row</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">),</span> <span class="s2">&quot;:</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+		<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">slab</span><span class="p">(</span><span class="n">cli</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;run in slab mode.</span>
+
+<span class="sd">    iterm2 coprocess command:</span>
+
+<span class="sd">export LANG=en_CA.UTF-8;export LOCALE=en_CA.UTF-8; /usr/local/bin/bitwarden slab</span>
+
+<span class="sd">    You may need to change the LOCAL and LANG settings and the path above.</span>
+
+<span class="sd">        which bitwarden</span>
+
+<span class="sd">    should get you the path. and echo $LANG should get you the locale and lang</span>
+<span class="sd">    settings.</span>
+
+<span class="sd">    slab mode searches and displays only uri&#39;s that equal:</span>
+<span class="sd">    sudolikeaboss://local</span>
+
+<span class="sd">	To use FZF:</span>
+<span class="sd">	\b</span>
+<span class="sd">	bw config slab_location `which fzf`</span>
+
+<span class="sd">	and it will work with fzf if you want. or  any other chooser.</span>
+
+<span class="sd">    I recommend: brew install choose-gui. and then bitwarden slab will be all</span>
+<span class="sd">    the more amazing. more info on the chooser here:</span>
+<span class="sd">    https://github.com/sdegutis/choose</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">slab</span><span class="p">()</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--pwonly&#39;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--decrypt/--no-decrypt&#39;</span><span class="p">,</span> <span class="s2">&quot;-d&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--fulldecrypt&#39;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;uuid&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">fetch_uuid</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;fetch by UUID.</span>
+
+<span class="sd">    This will be quite fast, as it only has to decrypt 1 cipher record.</span>
+
+<span class="sd">    --pwonly (or -p) will return ONLY the password, in decrypted form.</span>
+<span class="sd">    --decrypted (or -d) will return the json object with all</span>
+<span class="sd">        encrypted fields decrypted, except the password.</span>
+<span class="sd">    --fulldecrypt just like --decrypted, except will return</span>
+<span class="sd">        the password decrypted as well.</span>
+
+<span class="sd">    output format is always pretty printed JSON, unless --pwonly is set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">fetchUUID</span><span class="p">(</span><span class="n">uuid</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">))</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--pwonly&#39;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--decrypt/--no-decrypt&#39;</span><span class="p">,</span> <span class="s2">&quot;-d&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--fulldecrypt&#39;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">fetch_name</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;fetch by name.</span>
+
+<span class="sd">    This will be relatively slow, as it has to decrypt every single name</span>
+<span class="sd">    to compare before it finds the right one.</span>
+
+<span class="sd">    --pwonly (or -p) will return ONLY the password, in decrypted form.</span>
+<span class="sd">    --decrypted (or -d) will return the json object with all</span>
+<span class="sd">        encrypted fields decrypted, except the password.</span>
+<span class="sd">    --fulldecrypt just like --decrypted, except will return</span>
+<span class="sd">        the password decrypted as well.</span>
+
+<span class="sd">    output format is always pretty printed JSON, unless --pwonly is set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">fetchName</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">))</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--fmt&#39;</span><span class="p">,</span>
+    <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span>
+        <span class="s1">&#39;csv&#39;</span><span class="p">,</span> <span class="s1">&#39;tsv&#39;</span><span class="p">,</span> <span class="s1">&#39;json&#39;</span><span class="p">,</span> <span class="s1">&#39;yaml&#39;</span><span class="p">,</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span> <span class="s1">&#39;xls&#39;</span><span class="p">,</span> <span class="s1">&#39;xlsx&#39;</span><span class="p">,</span> <span class="s1">&#39;dbf&#39;</span><span class="p">,</span> <span class="s1">&#39;latex&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;ods&#39;</span>
+    <span class="p">]),</span>
+    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--headers/--no-headers&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;query&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">headers</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;find query in username,uri</span>
+
+<span class="sd">    this does a simpe python string find i.e.:</span>
+
+<span class="sd">        if query in username:</span>
+
+<span class="sd">    but searches against username and first url</span>
+
+<span class="sd">    You can export it in almost any format you wish with -f</span>
+
+<span class="sd">    to get the password once you found an entry use fetch_uuid</span>
+
+<span class="sd">    complicated example:</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    bw find example.com -f tsv --no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p</span>
+
+<span class="sd">   which means: find all entries with example.com in them, using fzf</span>
+<span class="sd">   to select a record and return only the password.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="n">ret</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">ret</span><span class="p">:</span>
+		<span class="n">dataset</span> <span class="o">=</span> <span class="n">tablib</span><span class="o">.</span><span class="n">Dataset</span><span class="p">()</span>
+		<span class="k">if</span> <span class="n">headers</span><span class="p">:</span>
+			<span class="n">dataset</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+		<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">ret</span><span class="p">:</span>
+			<span class="k">try</span><span class="p">:</span>
+				<span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+			<span class="k">except</span> <span class="n">tablib</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">InvalidDimensions</span><span class="p">:</span>
+				<span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;can not add row:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">fmt</span><span class="p">:</span>
+			<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">fmt</span><span class="p">))</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;query&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--params&quot;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">multiple</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--fmt&#39;</span><span class="p">,</span>
+    <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span>
+        <span class="s1">&#39;csv&#39;</span><span class="p">,</span> <span class="s1">&#39;tsv&#39;</span><span class="p">,</span> <span class="s1">&#39;json&#39;</span><span class="p">,</span> <span class="s1">&#39;yaml&#39;</span><span class="p">,</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span> <span class="s1">&#39;xls&#39;</span><span class="p">,</span> <span class="s1">&#39;xlsx&#39;</span><span class="p">,</span> <span class="s1">&#39;dbf&#39;</span><span class="p">,</span> <span class="s1">&#39;latex&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;ods&#39;</span>
+    <span class="p">]),</span>
+    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">sql</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">fmt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;query the local data store using SQL.</span>
+
+<span class="sd">    Basically just a wrapper around the records CLI</span>
+<span class="sd">    see https://github.com/kennethreitz/records for more info.</span>
+
+<span class="sd">    you can get the results back in pretty much any format you wish</span>
+<span class="sd">    with --fmt:</span>
+<span class="sd">    [&#39;csv&#39;, &#39;tsv&#39;, &#39;json&#39;, &#39;yaml&#39;, &#39;html&#39;, &#39;xls&#39;, &#39;xlsx&#39;, &#39;dbf&#39;, &#39;latex&#39;, &#39;ods&#39;]),</span>
+
+<span class="sd">    Query: can either be a filename to run or a SQL query string.</span>
+
+<span class="sd">    Query Parameters:</span>
+<span class="sd">        Query parameters can be specified in key=value format, and injected</span>
+<span class="sd">        into your query in :key format e.g.:</span>
+
+<span class="sd">        \b</span>
+<span class="sd">        $ bitwarden sql &#39;select created_at from ciphers where uuid ~= :uuid&#39; -p uuid=84c1bf0a-b0e8-49c4-8e58-8d0fc0a247c4</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        show all uuid entries:</span>
+<span class="sd">            bw sql &quot;select uuid from ciphers where uuid is not null&quot;</span>
+
+<span class="sd">        show all local config settings and their values if they are defined:</span>
+<span class="sd">            bw sql &quot;select key, value from config&quot; -f tsv</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="k">try</span><span class="p">:</span>
+		<span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">params</span><span class="p">])</span>
+	<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Parameters must be given in key=value format.&#39;</span><span class="p">)</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;params given:</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">params</span><span class="p">)</span>
+		<span class="n">exit</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+	<span class="c1"># if a file, run it.</span>
+	<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+		<span class="n">rows</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query_file</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+	<span class="c1"># Execute the query as a string.</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">rows</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">fmt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="nb">print</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="nb">print</span><span class="p">(</span><span class="n">rows</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">fmt</span><span class="p">))</span>
+	<span class="k">return</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">pull</span><span class="p">(</span><span class="n">cli</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;pull all records from server, updating local store as needed.&quot;&quot;&quot;</span>
+	<span class="c1"># LOG.debug(&quot;login as:%s&quot;, email)</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">pull</span><span class="p">()</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="n">cli</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;logout from server, stop agent and forget all secret keys.&quot;&quot;&quot;</span>
+	<span class="c1"># LOG.debug(&quot;login as:%s&quot;, email)</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">master_key</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;logged out, forgotten master_key and remote access_token.&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s1">&#39;--fmt&#39;</span><span class="p">,</span>
+    <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span>
+        <span class="s1">&#39;csv&#39;</span><span class="p">,</span> <span class="s1">&#39;tsv&#39;</span><span class="p">,</span> <span class="s1">&#39;json&#39;</span><span class="p">,</span> <span class="s1">&#39;yaml&#39;</span><span class="p">,</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span> <span class="s1">&#39;xls&#39;</span><span class="p">,</span> <span class="s1">&#39;xlsx&#39;</span><span class="p">,</span> <span class="s1">&#39;dbf&#39;</span><span class="p">,</span> <span class="s1">&#39;latex&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;ods&#39;</span>
+    <span class="p">]),</span>
+    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">fmt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;View and set bitwarden config items.</span>
+
+<span class="sd">    no arguments will list all keys and their values.</span>
+<span class="sd">    1 argument will show the value for that key</span>
+<span class="sd">    with 2 args will set a value for that key.</span>
+
+<span class="sd">    2 items are not shown in the all list, because their values are &quot;sensitive&quot;:</span>
+<span class="sd">    (&#39;client_token&#39;, &#39;encryption_key&#39;)</span>
+
+<span class="sd">    client_token is the JSON value returned from the login command and</span>
+<span class="sd">    encryption key is the encypted symmetric key (requires the master key to</span>
+<span class="sd">    decrypt, which is stored in the agent)</span>
+
+<span class="sd">    You can view these if you specifically ask for them (and even set their</span>
+<span class="sd">    values) but setting the values by hand is almost always a bad idea, you</span>
+<span class="sd">    have been warned.</span>
+
+<span class="sd">    You can of course format the output any way you so choose.</span>
+<span class="sd">    Why you would want the output in XLS format is beyond me.</span>
+
+<span class="sd">\b</span>
+<span class="sd">NOTES:</span>
+<span class="sd">----------</span>
+
+<span class="sd">Default values are computed at runtime and are not shown here.</span>
+
+<span class="sd">\b</span>
+<span class="sd">EXAMPLES:</span>
+<span class="sd">----------------</span>
+
+<span class="sd">\b</span>
+<span class="sd">bitwarden config email</span>
+<span class="sd">key  |value</span>
+<span class="sd">-----|------------</span>
+<span class="sd">email|nobody@example.com</span>
+
+<span class="sd">show the email setting.</span>
+
+<span class="sd">\b</span>
+<span class="sd">bitwarden config email somebodylovesme@example.com</span>
+<span class="sd">key  |old value         |new value</span>
+<span class="sd">-----|------------------|---------------------------</span>
+<span class="sd">email|nobody@example.com|somebodylovesme@example.com</span>
+
+<span class="sd">will set the login email to nobody@example.com</span>
+
+<span class="sd">   &quot;&quot;&quot;</span>
+	<span class="n">skip</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;isAgentRunning&#39;</span><span class="p">,</span> <span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;get&#39;</span><span class="p">,</span> <span class="s1">&#39;set&#39;</span><span class="p">,</span> <span class="s1">&#39;scalar&#39;</span><span class="p">)</span>
+	<span class="n">skipAllList</span> <span class="o">=</span> <span class="n">skip</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;client_token&#39;</span><span class="p">,</span> <span class="s1">&#39;encryption_key&#39;</span><span class="p">)</span>
+	<span class="n">dataset</span> <span class="o">=</span> <span class="n">tablib</span><span class="o">.</span><span class="n">Dataset</span><span class="p">()</span>
+	<span class="n">old</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+		<span class="n">dataset</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;old value&quot;</span><span class="p">,</span> <span class="s2">&quot;new value&quot;</span><span class="p">)</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">dataset</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">key</span><span class="p">:</span>
+		<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;looking up value for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+				<span class="n">old</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+				<span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="p">):</span>
+				<span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+					<span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)))</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="p">):</span>
+			<span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">skipAllList</span><span class="p">:</span>
+				<span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;skipping from list:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+				<span class="k">continue</span>
+			<span class="n">dataset</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">cli</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)))</span>
+	<span class="k">if</span> <span class="n">fmt</span><span class="p">:</span>
+		<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">fmt</span><span class="p">))</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

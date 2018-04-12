@@ -1,0 +1,459 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Internals &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Troubleshooting" href="troubleshooting.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="internals">
+<span id="id1"></span><h1>Internals<a class="headerlink" href="#internals" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-bitwarden.main"></span><p><a class="reference external" href="http://click.pocoo.org/5/complex/#building-a-git-clone">http://click.pocoo.org/5/complex/#building-a-git-clone</a></p>
+<dl class="docutils">
+<dt>IDEAS/TODO:</dt>
+<dd>move agent to not timeout, include agent stop and login commands(login would</dd>
+</dl>
+<p>be an offline login just setting the master key).</p>
+<blockquote>
+<div>maybe even a agent service command to enable/disable setting it up as a</div></blockquote>
+<p>service in the OS (Launchd macOS windows Service, etc.)</p>
+<blockquote>
+<div>Change slab to use setting slab_chooser so doing the FZF integration is as</div></blockquote>
+<p>easy as bw config slab_chooser fzf plus then is cross platform.</p>
+<blockquote>
+<div>Integrate with pymux (tmux would require upstream patches I believe.)?</div></blockquote>
+<dl class="class">
+<dt id="bitwarden.main.CLI">
+<em class="property">class </em><code class="descclassname">bitwarden.main.</code><code class="descname">CLI</code><span class="sig-paren">(</span><em>url=None</em>, <em>identurl=None</em>, <em>debug=False</em>, <em>dbURL=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/main.html#CLI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.main.CLI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>CLI class</p>
+</dd></dl>
+
+<span class="target" id="module-bitwarden.client"></span><p>I act like a bitwarden client and interact with a remote bitwarden server
+pylint: disable=W191</p>
+<dl class="class">
+<dt id="bitwarden.client.Client">
+<em class="property">class </em><code class="descclassname">bitwarden.client.</code><code class="descname">Client</code><span class="sig-paren">(</span><em>db</em>, <em>debug</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Client API.</p>
+<p>Called by click from main.py, but in theory callable by anyone wanting to be a bitwarden client.</p>
+<dl class="method">
+<dt id="bitwarden.client.Client.fetchName">
+<code class="descname">fetchName</code><span class="sig-paren">(</span><em>name</em>, <em>pwonly</em>, <em>decrypt</em>, <em>fulldecrypt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.fetchName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.fetchName" title="Permalink to this definition">¶</a></dt>
+<dd><p>fetch from local DB cipher entries by name.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.fetchUUID">
+<code class="descname">fetchUUID</code><span class="sig-paren">(</span><em>uuid</em>, <em>pwonly</em>, <em>decrypt</em>, <em>fulldecrypt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.fetchUUID"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.fetchUUID" title="Permalink to this definition">¶</a></dt>
+<dd><p>fetch from local DB cipher entries by UUID</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.find">
+<code class="descname">find</code><span class="sig-paren">(</span><em>query</em>, <em>nameOnly=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.find" title="Permalink to this definition">¶</a></dt>
+<dd><p>find stuff</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.login">
+<code class="descname">login</code><span class="sig-paren">(</span><em>email</em>, <em>password</em>, <em>timeout</em>, <em>mfa</em>, <em>mfa_token</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.login"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.login" title="Permalink to this definition">¶</a></dt>
+<dd><p>login to bitwarden server.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.pull">
+<code class="descname">pull</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.pull"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.pull" title="Permalink to this definition">¶</a></dt>
+<dd><p>pull from remote server</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.register">
+<code class="descname">register</code><span class="sig-paren">(</span><em>email</em>, <em>password</em>, <em>name</em>, <em>hint</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.register"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>register a new account with bitwarden server</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.client.Client.slab">
+<code class="descname">slab</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/client.html#Client.slab"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.client.Client.slab" title="Permalink to this definition">¶</a></dt>
+<dd><p>operate in sudolikeaboss mode</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-bitwarden.crypto"></span><p>Bitwarden crypto functions.</p>
+<p>Yes, this code is UGLY, The  bitwarden documentation is either
+missing, inconsistent or confusing.</p>
+<p>This needs a refactor, but unknown if I will get to it before I move back to rust
+where this code probably should live for reals.</p>
+<p>See tests/test_bitwarden.py if you want to make sense of this ugly.
+refactors are welcome.</p>
+<p>docs on how this all works: <a class="reference external" href="https://help.bitwarden.com/crypto.html">https://help.bitwarden.com/crypto.html</a>
+and <a class="reference external" href="https://github.com/jcs/bitwarden-ruby/blob/master/API.md">https://github.com/jcs/bitwarden-ruby/blob/master/API.md</a></p>
+<dl class="exception">
+<dt id="bitwarden.crypto.UnimplementedError">
+<em class="property">exception </em><code class="descclassname">bitwarden.crypto.</code><code class="descname">UnimplementedError</code><a class="reference internal" href="_modules/bitwarden/crypto.html#UnimplementedError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.UnimplementedError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>for when I’m toooooooo lazy</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.decodeCipherString">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">decodeCipherString</code><span class="sig-paren">(</span><em>cipherString</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#decodeCipherString"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.decodeCipherString" title="Permalink to this definition">¶</a></dt>
+<dd><p>decode a cipher tring into it’s parts</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.decrypt">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">decrypt</code><span class="sig-paren">(</span><em>cipherString</em>, <em>key</em>, <em>macKey</em>, <em>decode=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#decrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.decrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>decrypt a CipherString and return plaintext
+Remove the PKCS#7 padding from a text string
+<a class="reference external" href="https://tools.ietf.org/html/rfc2315#section-10.3">https://tools.ietf.org/html/rfc2315#section-10.3</a>
+section 2</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.decryptEncryptionKey">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">decryptEncryptionKey</code><span class="sig-paren">(</span><em>cipherString</em>, <em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#decryptEncryptionKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.decryptEncryptionKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns encryptionKey and macKey</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.encodeCipherString">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">encodeCipherString</code><span class="sig-paren">(</span><em>enctype</em>, <em>iv</em>, <em>ct</em>, <em>mac</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#encodeCipherString"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.encodeCipherString" title="Permalink to this definition">¶</a></dt>
+<dd><p>return bitwarden cipherstring</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.encrypt">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">encrypt</code><span class="sig-paren">(</span><em>pt</em>, <em>key</em>, <em>macKey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#encrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.encrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>encrypt+mac a value with a key and mac key and random iv, return cipherString</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.hashedPassword">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">hashedPassword</code><span class="sig-paren">(</span><em>password</em>, <em>salt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#hashedPassword"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.hashedPassword" title="Permalink to this definition">¶</a></dt>
+<dd><p>base64-encode a wrapped, stretched password+salt for signup/login</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.macsEqual">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">macsEqual</code><span class="sig-paren">(</span><em>mac1</em>, <em>mac2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#macsEqual"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.macsEqual" title="Permalink to this definition">¶</a></dt>
+<dd><p>compare two hmacs, with double hmac verification</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.makeEncKey">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">makeEncKey</code><span class="sig-paren">(</span><em>symmetricKey</em>, <em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#makeEncKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.makeEncKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>encrypt random bytes with a key to make new encryption key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.makeKey">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">makeKey</code><span class="sig-paren">(</span><em>password</em>, <em>salt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#makeKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.makeKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>make master key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.crypto.symmetricKey">
+<code class="descclassname">bitwarden.crypto.</code><code class="descname">symmetricKey</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/crypto.html#symmetricKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.crypto.symmetricKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>create symmetrickey</p>
+</dd></dl>
+
+<span class="target" id="module-bitwarden.db"></span><p>Database and configuration code.</p>
+<dl class="class">
+<dt id="bitwarden.db.Config">
+<em class="property">class </em><code class="descclassname">bitwarden.db.</code><code class="descname">Config</code><span class="sig-paren">(</span><em>db</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Configuration settings.</p>
+<p>We define every possible config setting as a property so that every
+setting gets documented.  Otherwise nobody would bother.
+Plus it makes access in the rest of the code much easier :)</p>
+<dl class="attribute">
+<dt id="bitwarden.db.Config.agent_location">
+<code class="descname">agent_location</code><a class="headerlink" href="#bitwarden.db.Config.agent_location" title="Permalink to this definition">¶</a></dt>
+<dd><p>path to agent executable..</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.agent_port">
+<code class="descname">agent_port</code><a class="headerlink" href="#bitwarden.db.Config.agent_port" title="Permalink to this definition">¶</a></dt>
+<dd><p>localhost port that the agent listens to, when it’s running.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.agent_timeout">
+<code class="descname">agent_timeout</code><a class="headerlink" href="#bitwarden.db.Config.agent_timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>timeout for the agent. &lt;0 means no timeout.
+&gt; 0 means timeout for that many seconds.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.agent_token">
+<code class="descname">agent_token</code><a class="headerlink" href="#bitwarden.db.Config.agent_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>token to talk with agent.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.client_token">
+<code class="descname">client_token</code><a class="headerlink" href="#bitwarden.db.Config.client_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>token from bitwarden server.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.debug">
+<code class="descname">debug</code><a class="headerlink" href="#bitwarden.db.Config.debug" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.email">
+<code class="descname">email</code><a class="headerlink" href="#bitwarden.db.Config.email" title="Permalink to this definition">¶</a></dt>
+<dd><p>bitwarden login email address.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.encryption_key">
+<code class="descname">encryption_key</code><a class="headerlink" href="#bitwarden.db.Config.encryption_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the encrypted encryption key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.db.Config.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>key</em>, <em>default=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>return value from DB or default if not set</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.get_master_key">
+<code class="descname">get_master_key</code><a class="reference internal" href="_modules/bitwarden/db.html#Config.get_master_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.get_master_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>we cache this call, so we can cache the master_key in process,
+so decryption goes WAY faster, since we do not have to call out
+to the agent every time we want to decrypt.
+This doesn’t really affect security, since this code is only running
+long enough to do it’s decryption and then exits.
+and code that doesn’t need to decrypt stuff will never call us.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.identurl">
+<code class="descname">identurl</code><a class="headerlink" href="#bitwarden.db.Config.identurl" title="Permalink to this definition">¶</a></dt>
+<dd><p>bitwarden URL</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.db.Config.isAgentRunning">
+<code class="descname">isAgentRunning</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config.isAgentRunning"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.isAgentRunning" title="Permalink to this definition">¶</a></dt>
+<dd><p>return pid if agent is running, else None</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.last_sync_time">
+<code class="descname">last_sync_time</code><a class="headerlink" href="#bitwarden.db.Config.last_sync_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>last time we synchronized with the server.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.master_key">
+<code class="descname">master_key</code><a class="headerlink" href="#bitwarden.db.Config.master_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>master key that decrypts information.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.db.Config.one">
+<code class="descname">one</code><span class="sig-paren">(</span><em>rows</em>, <em>default=None</em>, <em>as_dict=False</em>, <em>as_ordereddict=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config.one"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.one" title="Permalink to this definition">¶</a></dt>
+<dd><p>implement one from records trunk since it is not released yet</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.db.Config.scalar">
+<code class="descname">scalar</code><span class="sig-paren">(</span><em>one</em>, <em>default=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config.scalar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.scalar" title="Permalink to this definition">¶</a></dt>
+<dd><p>return single column from single row or default</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.db.Config.set">
+<code class="descname">set</code><span class="sig-paren">(</span><em>key</em>, <em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#Config.set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.Config.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>set the key to equal value in the DB</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.slab_location">
+<code class="descname">slab_location</code><a class="headerlink" href="#bitwarden.db.Config.slab_location" title="Permalink to this definition">¶</a></dt>
+<dd><p>path to executable for slab to run to choose an entry..</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="bitwarden.db.Config.url">
+<code class="descname">url</code><a class="headerlink" href="#bitwarden.db.Config.url" title="Permalink to this definition">¶</a></dt>
+<dd><p>bitwarden URL</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="bitwarden.db.UnimplementedError">
+<em class="property">exception </em><code class="descclassname">bitwarden.db.</code><code class="descname">UnimplementedError</code><a class="reference internal" href="_modules/bitwarden/db.html#UnimplementedError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.UnimplementedError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>for when I was too lazy</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.db.badOrMissingDB">
+<code class="descclassname">bitwarden.db.</code><code class="descname">badOrMissingDB</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#badOrMissingDB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.badOrMissingDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>run when DB is either missing or not setup properly</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.db.connect">
+<code class="descclassname">bitwarden.db.</code><code class="descname">connect</code><span class="sig-paren">(</span><em>dbURL=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>connect to DB and return records.db instance</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.db.isexception">
+<code class="descclassname">bitwarden.db.</code><code class="descname">isexception</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/db.html#isexception"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.db.isexception" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an object, return a boolean indicating whether it is an instance
+or subclass of <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a>.
+stolen from: <a class="reference external" href="https://github.com/kennethreitz/records/blob/master/records.py">https://github.com/kennethreitz/records/blob/master/records.py</a></p>
+</dd></dl>
+
+<span class="target" id="module-bitwarden.agent"></span><p>agent code.</p>
+<p>example call:
+echo ‘{“agent_token”:”super secret”, “master_key”: “secret”, “timeout”:30}’ | agent 127.0.0.1:6277</p>
+<p>curl –data ‘{“key”:”super secret”}’ <a class="reference external" href="http://localhost:6277/">http://localhost:6277/</a>
+{“master_key”: “secret”}%</p>
+<dl class="function">
+<dt id="bitwarden.agent.daemonizedMain">
+<code class="descclassname">bitwarden.agent.</code><code class="descname">daemonizedMain</code><span class="sig-paren">(</span><em>secret</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/agent.html#daemonizedMain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.daemonizedMain" title="Permalink to this definition">¶</a></dt>
+<dd><p>daemonize me, please!</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bitwarden.agent.index">
+<em class="property">class </em><code class="descclassname">bitwarden.agent.</code><code class="descname">index</code><a class="reference internal" href="_modules/bitwarden/agent.html#index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>webpy index class.</p>
+<dl class="method">
+<dt id="bitwarden.agent.index.GET">
+<code class="descname">GET</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/agent.html#index.GET"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.index.GET" title="Permalink to this definition">¶</a></dt>
+<dd><p>index get</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bitwarden.agent.index.POST">
+<code class="descname">POST</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/agent.html#index.POST"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.index.POST" title="Permalink to this definition">¶</a></dt>
+<dd><p>index post</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.agent.main">
+<code class="descclassname">bitwarden.agent.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/agent.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.agent.timeout">
+<code class="descclassname">bitwarden.agent.</code><code class="descname">timeout</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/agent.html#timeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.agent.timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>called when it’s time to exit</p>
+</dd></dl>
+
+<span class="target" id="module-bitwarden.slab"></span><p>Utilities for slab mode.</p>
+<dl class="function">
+<dt id="bitwarden.slab.appleScriptChooser">
+<code class="descclassname">bitwarden.slab.</code><code class="descname">appleScriptChooser</code><span class="sig-paren">(</span><em>choices</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/slab.html#appleScriptChooser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.slab.appleScriptChooser" title="Permalink to this definition">¶</a></dt>
+<dd><p>give user a choice of items. return selected item</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.slab.choice">
+<code class="descclassname">bitwarden.slab.</code><code class="descname">choice</code><span class="sig-paren">(</span><em>choices</em>, <em>slab_location</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/slab.html#choice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.slab.choice" title="Permalink to this definition">¶</a></dt>
+<dd><p>give user a choice of items, return selected item
+if choose-gui is installed, use that, otherwise fall back to applescript</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="bitwarden.slab.genericChooser">
+<code class="descclassname">bitwarden.slab.</code><code class="descname">genericChooser</code><span class="sig-paren">(</span><em>choices</em>, <em>slab_location</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/bitwarden/slab.html#genericChooser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bitwarden.slab.genericChooser" title="Permalink to this definition">¶</a></dt>
+<dd><p>use choose gui for choices</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="troubleshooting.html" title="previous chapter">Troubleshooting</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/internals.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/internals.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

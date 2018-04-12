@@ -1,0 +1,426 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>bitwarden.db &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for bitwarden.db</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Database and configuration code.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="c1"># pylint: disable=E0611,E0401</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="k">import</span> <span class="n">urlparse</span>
+<span class="c1">#pylint: disable=E0401</span>
+<span class="kn">import</span> <span class="nn">records</span>  <span class="c1"># https://github.com/kennethreitz/records</span>
+<span class="kn">import</span> <span class="nn">psutil</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">standardpaths</span>
+<span class="n">standardpaths</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+    <span class="n">application_name</span><span class="o">=</span><span class="s1">&#39;bitwarden&#39;</span><span class="p">,</span> <span class="n">organization_name</span><span class="o">=</span><span class="s1">&#39;birl.org&#39;</span><span class="p">)</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+<div class="viewcode-block" id="UnimplementedError"><a class="viewcode-back" href="../../internals.html#bitwarden.db.UnimplementedError">[docs]</a><span class="k">class</span> <span class="nc">UnimplementedError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;for when I was too lazy&quot;&quot;&quot;</span>
+	<span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="badOrMissingDB"><a class="viewcode-back" href="../../internals.html#bitwarden.db.badOrMissingDB">[docs]</a><span class="k">def</span> <span class="nf">badOrMissingDB</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;run when DB is either missing or not setup properly&quot;&quot;&quot;</span>
+	<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;You need to run liquibase via tools/lb.sh&quot;</span><span class="p">)</span>
+	<span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;DB </span><span class="si">%s</span><span class="s2"> does not exist: You need to run tools/lb.sh&quot;</span> <span class="o">%</span> <span class="n">url</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="isexception"><a class="viewcode-back" href="../../internals.html#bitwarden.db.isexception">[docs]</a><span class="k">def</span> <span class="nf">isexception</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Given an object, return a boolean indicating whether it is an instance</span>
+<span class="sd">    or subclass of :py:class:`Exception`.</span>
+<span class="sd">    stolen from: https://github.com/kennethreitz/records/blob/master/records.py</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>
+		<span class="k">return</span> <span class="kc">True</span>
+	<span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>
+		<span class="k">return</span> <span class="kc">True</span>
+	<span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="connect"><a class="viewcode-back" href="../../internals.html#bitwarden.db.connect">[docs]</a><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">dbURL</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;connect to DB and return records.db instance&quot;&quot;&quot;</span>
+	<span class="n">parsedURL</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">dbURL</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">parsedURL</span><span class="o">.</span><span class="n">scheme</span> <span class="o">!=</span> <span class="s1">&#39;sqlite&#39;</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="n">UnimplementedError</span><span class="p">(</span>
+		    <span class="s2">&quot;DB scheme:</span><span class="si">{}</span><span class="s2"> is not currently supported, patches welcome.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+		        <span class="n">parsedURL</span><span class="o">.</span><span class="n">scheme</span><span class="p">))</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">parsedURL</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+		<span class="n">badOrMissingDB</span><span class="p">(</span><span class="n">dbURL</span><span class="p">)</span>
+	<span class="c1"># nobody can play with this file, except us, we don&#39;t play well with others.</span>
+	<span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">parsedURL</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="mo">0o0600</span><span class="p">)</span>
+	<span class="n">db</span> <span class="o">=</span> <span class="n">records</span><span class="o">.</span><span class="n">Database</span><span class="p">(</span><span class="n">dbURL</span><span class="p">)</span>
+	<span class="k">if</span> <span class="s1">&#39;config&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">get_table_names</span><span class="p">():</span>
+		<span class="n">badOrMissingDB</span><span class="p">(</span><span class="n">dbURL</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">db</span></div>
+
+
+<div class="viewcode-block" id="Config"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config">[docs]</a><span class="k">class</span> <span class="nc">Config</span><span class="p">():</span>
+	<span class="sd">&quot;&quot;&quot;Configuration settings.</span>
+
+<span class="sd">    We define every possible config setting as a property so that every</span>
+<span class="sd">    setting gets documented.  Otherwise nobody would bother.</span>
+<span class="sd">    Plus it makes access in the rest of the code much easier :)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">db</span>
+		<span class="c1"># defined from the perspective of a cipher object.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">encryptedValues</span> <span class="o">=</span> <span class="p">(</span>
+		    <span class="p">(</span><span class="s2">&quot;Data&quot;</span><span class="p">,</span> <span class="s2">&quot;Name&quot;</span><span class="p">),</span>
+		    <span class="p">(</span><span class="s2">&quot;Data&quot;</span><span class="p">,</span> <span class="s2">&quot;Password&quot;</span><span class="p">),</span>
+		    <span class="p">(</span><span class="s2">&quot;Data&quot;</span><span class="p">,</span> <span class="s2">&quot;Uri&quot;</span><span class="p">),</span>
+		<span class="p">)</span>
+
+<div class="viewcode-block" id="Config.set"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.set">[docs]</a>	<span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;set the key to equal value in the DB&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+		    <span class="s2">&quot;INSERT OR REPLACE INTO config (key, value) VALUES (:key, :value)&quot;</span><span class="p">,</span>
+		    <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+		    <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Config.one"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.one">[docs]</a>	<span class="k">def</span> <span class="nf">one</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">as_ordereddict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;implement one from records trunk since it is not released yet&quot;&quot;&quot;</span>
+		<span class="k">try</span><span class="p">:</span>
+			<span class="n">record</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">isexception</span><span class="p">(</span><span class="n">default</span><span class="p">):</span>
+				<span class="c1">#pylint: disable=E0702</span>
+				<span class="k">raise</span> <span class="n">default</span>
+			<span class="k">return</span> <span class="n">default</span>
+		<span class="k">try</span><span class="p">:</span>
+			<span class="n">rows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+		<span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+			<span class="k">pass</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;RecordCollection contained more than one row. &#39;</span>
+			                 <span class="s1">&#39;Expects only one row when using &#39;</span>
+			                 <span class="s1">&#39;RecordCollection.one&#39;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">as_dict</span><span class="p">:</span>
+			<span class="k">return</span> <span class="n">record</span><span class="o">.</span><span class="n">as_dict</span><span class="p">()</span>
+		<span class="k">elif</span> <span class="n">as_ordereddict</span><span class="p">:</span>
+			<span class="k">return</span> <span class="n">record</span><span class="o">.</span><span class="n">as_dict</span><span class="p">(</span><span class="n">ordered</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">return</span> <span class="n">record</span></div>
+
+<div class="viewcode-block" id="Config.scalar"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.scalar">[docs]</a>	<span class="k">def</span> <span class="nf">scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">one</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;return single column from single row or default&quot;&quot;&quot;</span>
+		<span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="n">one</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="n">default</span></div>
+
+<div class="viewcode-block" id="Config.get"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.get">[docs]</a>	<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;return value from DB or default if not set&quot;&quot;&quot;</span>
+		<span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;select value from config where key=:key&quot;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span></div>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">identurl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;bitwarden URL&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ident_url&#39;</span><span class="p">,</span> <span class="s1">&#39;https://identity.bitwarden.com&#39;</span><span class="p">)</span>
+
+	<span class="nd">@identurl</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">identurl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;ident_url&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;bitwarden URL&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;https://api.bitwarden.com&#39;</span><span class="p">)</span>
+
+	<span class="nd">@url</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;bitwarden login email address.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;EMAIL&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+	<span class="nd">@email</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">email</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;debug&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+	<span class="nd">@debug</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;debug setter&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">encryption_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;This is the encrypted encryption key.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;encryption_key&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+	<span class="nd">@encryption_key</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">encryption_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;encryption_key&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">client_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;token from bitwarden server.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;client_token&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+	<span class="nd">@client_token</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">client_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;set token&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;client_token&#39;</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">last_sync_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;last time we synchronized with the server.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;last_sync_time&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+	<span class="nd">@last_sync_time</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">last_sync_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;set last_sync_time&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;last_sync_time&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">slab_location</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;path to executable for slab to run to choose an entry..&quot;&quot;&quot;</span>
+		<span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;slab_location&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">value</span>
+
+	<span class="nd">@slab_location</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">slab_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;setter&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;slab_location&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">agent_location</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;path to agent executable..&quot;&quot;&quot;</span>
+		<span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;agent_location&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">value</span><span class="p">:</span>
+			<span class="c1"># get last item off the stack, so we can rock the actual binary call path.</span>
+			<span class="n">value</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+			<span class="n">value</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;bitwarden-agent&#39;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">value</span>
+
+	<span class="nd">@agent_location</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">agent_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;setter&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;agent_location&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">agent_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;token to talk with agent.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;agent_token&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+	<span class="nd">@agent_token</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">agent_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;set token&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;agent_token&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">agent_timeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        timeout for the agent. &lt;0 means no timeout.</span>
+<span class="sd">        &gt; 0 means timeout for that many seconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;agent_timeout&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+	<span class="nd">@agent_timeout</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">agent_timeout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;setter for agent_timeout&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;agent_timeout&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">agent_port</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        localhost port that the agent listens to, when it&#39;s running.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;agent_port&#39;</span><span class="p">,</span> <span class="mi">6277</span><span class="p">))</span>
+
+	<span class="nd">@agent_port</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">agent_port</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;setter for agent_port&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;agent_port&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Config.get_master_key"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.get_master_key">[docs]</a>	<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+	<span class="k">def</span> <span class="nf">get_master_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        we cache this call, so we can cache the master_key in process,</span>
+<span class="sd">        so decryption goes WAY faster, since we do not have to call out</span>
+<span class="sd">        to the agent every time we want to decrypt.</span>
+<span class="sd">        This doesn&#39;t really affect security, since this code is only running</span>
+<span class="sd">        long enough to do it&#39;s decryption and then exits.</span>
+<span class="sd">        and code that doesn&#39;t need to decrypt stuff will never call us.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">ret</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="k">try</span><span class="p">:</span>
+			<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+			    <span class="s2">&quot;http://127.0.0.1:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">agent_port</span><span class="p">),</span>
+			    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+			        <span class="s1">&#39;key&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">agent_token</span><span class="p">,</span>
+			        <span class="s1">&#39;exit&#39;</span><span class="p">:</span> <span class="kc">False</span>
+			    <span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+			<span class="k">try</span><span class="p">:</span>
+				<span class="n">key</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+			<span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;problem json decoding:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+				<span class="k">return</span> <span class="kc">None</span>
+		<span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;agent not running, you must login.&quot;</span><span class="p">)</span>
+		<span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">Timeout</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;timeout, agent probably not running.&quot;</span><span class="p">)</span>
+		<span class="k">try</span><span class="p">:</span>
+			<span class="n">ret</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="s1">&#39;master_key&#39;</span><span class="p">])</span>
+		<span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;expected master_key but agent returned:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+			          <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">ret</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">ret</span></div>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">master_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        master key that decrypts information.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_master_key</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Config.isAgentRunning"><a class="viewcode-back" href="../../internals.html#bitwarden.db.Config.isAgentRunning">[docs]</a>	<span class="k">def</span> <span class="nf">isAgentRunning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;return pid if agent is running, else None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">pidFile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+		    <span class="n">standardpaths</span><span class="o">.</span><span class="n">get_writable_path</span><span class="p">(</span><span class="s1">&#39;app_local_data&#39;</span><span class="p">),</span> <span class="s1">&#39;agent.pid&#39;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pidFile</span><span class="p">):</span>
+			<span class="c1"># agent already running, not so good for us.</span>
+			<span class="n">pid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">pidFile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+			<span class="k">if</span> <span class="n">psutil</span><span class="o">.</span><span class="n">pid_exists</span><span class="p">(</span><span class="n">pid</span><span class="p">):</span>
+				<span class="k">return</span> <span class="n">pid</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="c1"># cleanup</span>
+				<span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">pidFile</span><span class="p">)</span>
+		<span class="k">return</span> <span class="kc">None</span></div>
+
+	<span class="nd">@master_key</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">master_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;setter for master key -- starts agent</span>
+<span class="sd">        set value to None will stop agent and not restart it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">pid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">isAgentRunning</span><span class="p">()</span>
+		<span class="k">if</span> <span class="n">pid</span><span class="p">:</span>
+			<span class="n">os</span><span class="o">.</span><span class="n">kill</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;value of none: shutdown agent, not starting it again&quot;</span><span class="p">)</span>
+			<span class="k">return</span>
+		<span class="n">key</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+		<span class="n">agent_token</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+		<span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">agent_location</span><span class="p">,</span> <span class="s1">&#39;127.0.0.1:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">agent_port</span><span class="p">)]</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;running agent:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cmd</span><span class="p">)</span>
+		<span class="n">p</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+		    <span class="n">cmd</span><span class="p">,</span>
+		    <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+		    <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+		    <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+		    <span class="s1">&#39;master_key&#39;</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span>
+		    <span class="s1">&#39;agent_token&#39;</span><span class="p">:</span> <span class="n">agent_token</span><span class="p">,</span>
+		    <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">agent_port</span>
+		<span class="p">}</span>
+		<span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">agent_timeout</span>
+		<span class="k">if</span> <span class="n">timeout</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="n">data</span><span class="p">[</span><span class="s1">&#39;tiemout&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">timeout</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sending no timeout because:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sending to agent:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+		<span class="n">out</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+		<span class="n">p</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">agent_token</span> <span class="o">=</span> <span class="n">agent_token</span>
+		<span class="c1"># self.agent_timeout = time.time() + timeout</span>
+		<span class="n">out</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;agent returned:</span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">out</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+		<span class="k">return</span> <span class="kc">True</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

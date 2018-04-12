@@ -1,0 +1,156 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>bitwarden.slab &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for bitwarden.slab</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Utilities for slab mode.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">SLABSCRIPT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">	tell app &quot;System Events&quot;</span>
+<span class="s2">		Activate</span>
+
+<span class="s2">		set SlabList to </span><span class="si">{}</span><span class="s2"></span>
+<span class="s2">		set Answer to (choose from list SlabList with title &quot;sudolikeaboss&quot;)</span>
+
+<span class="s2">		if Answer is false then</span>
+<span class="s2">			error number -128 (* user cancelled *)</span>
+<span class="s2">		else</span>
+<span class="s2">			set Answer to Answer&#39;s item 1 (* extract choice from list *)</span>
+<span class="s2">		end if</span>
+<span class="s2">	end tell</span>
+<span class="s2">	tell app &quot;iTerm2&quot;</span>
+<span class="s2">		Activate</span>
+<span class="s2">		return Answer</span>
+<span class="s2">	end tell</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="appleScriptChooser"><a class="viewcode-back" href="../../internals.html#bitwarden.slab.appleScriptChooser">[docs]</a><span class="k">def</span> <span class="nf">appleScriptChooser</span><span class="p">(</span><span class="n">choices</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;give user a choice of items. return selected item&quot;&quot;&quot;</span>
+    <span class="n">fd</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="c1">#choices = [&#39;a&#39;,&#39;b&#39;,&#39;c&#39;]</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;{ &quot;&#39;</span> <span class="o">+</span> <span class="s1">&#39;&quot;,&quot;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">choices</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; }&#39;</span>
+    <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">SLABSCRIPT</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">name</span>
+    <span class="c1">#print(&quot;fname:%s&quot; % name, file=sys.stderr)</span>
+    <span class="n">fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+            <span class="p">[</span><span class="s1">&#39;/usr/bin/osascript&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">],</span> <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># str(out).strip().replace(&#39;\n&#39;,&#39;&#39;)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="c1">#print(&quot;out:%s&quot; % out, file=sys.stderr)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="genericChooser"><a class="viewcode-back" href="../../internals.html#bitwarden.slab.genericChooser">[docs]</a><span class="k">def</span> <span class="nf">genericChooser</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="n">slab_location</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;use choose gui for choices</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">slab_location</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                             <span class="nb">input</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">choices</span><span class="p">),</span> <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="choice"><a class="viewcode-back" href="../../internals.html#bitwarden.slab.choice">[docs]</a><span class="k">def</span> <span class="nf">choice</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="n">slab_location</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;give user a choice of items, return selected item</span>
+<span class="sd">    if choose-gui is installed, use that, otherwise fall back to applescript</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">slab_location</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">genericChooser</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="n">slab_location</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;/usr/local/bin/choose&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">genericChooser</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="s1">&#39;/usr/local/bin/choose&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">appleScriptChooser</span><span class="p">(</span><span class="n">choices</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;no valid chooser, try bw config slab_location &lt;chooser binary&gt;&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

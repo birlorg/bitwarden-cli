@@ -1,0 +1,357 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>bitwarden.client &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for bitwarden.client</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">I act like a bitwarden client and interact with a remote bitwarden server</span>
+<span class="sd">pylint: disable=W191</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">posixpath</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">standardpaths</span>  <span class="c1"># https://pystandardpaths.readthedocs.io/</span>
+<span class="kn">import</span> <span class="nn">bitwarden.db</span> <span class="k">as</span> <span class="nn">DB</span>
+<span class="kn">import</span> <span class="nn">bitwarden.crypto</span> <span class="k">as</span> <span class="nn">crypto</span>
+<span class="kn">import</span> <span class="nn">bitwarden.slab</span> <span class="k">as</span> <span class="nn">slab</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">standardpaths</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+    <span class="n">application_name</span><span class="o">=</span><span class="s1">&#39;bitwarden&#39;</span><span class="p">,</span> <span class="n">organization_name</span><span class="o">=</span><span class="s1">&#39;birl.org&#39;</span><span class="p">)</span>
+<span class="n">mfa_map</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;u2f&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;yubikey&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;duo&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;authenticator&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Client API.</span>
+
+<span class="sd">	Called by click from main.py, but in theory callable by anyone wanting to be a bitwarden client.</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">debug</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">db</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+			<span class="n">requests_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;urllib3&quot;</span><span class="p">)</span>
+			<span class="n">requests_log</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+			<span class="n">requests_log</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">True</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Client.register"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.register">[docs]</a>	<span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">hint</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		register a new account with bitwarden server</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">masterKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">makeKey</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+		<span class="n">masterPasswordHash</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">hashedPassword</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+		<span class="n">expectedEncryptionKey</span><span class="p">,</span> <span class="n">expectedMacKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">symmetricKey</span><span class="p">()</span>
+		<span class="n">protectedKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">makeEncKey</span><span class="p">(</span>
+		    <span class="n">expectedEncryptionKey</span> <span class="o">+</span> <span class="n">expectedMacKey</span><span class="p">,</span> <span class="n">masterKey</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encrypted_key</span> <span class="o">=</span> <span class="n">protectedKey</span>
+
+		<span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+		    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+		    <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+		    <span class="s2">&quot;masterPasswordHash&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">masterPasswordHash</span><span class="p">),</span>
+		    <span class="s2">&quot;masterPasswordHint&quot;</span><span class="p">:</span> <span class="n">hint</span><span class="p">,</span>
+		    <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">protectedKey</span>
+		<span class="p">}</span>
+		<span class="n">url</span> <span class="o">=</span> <span class="n">posixpath</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="s1">&#39;accounts&#39;</span><span class="p">,</span> <span class="s1">&#39;register&#39;</span><span class="p">)</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;registering to: </span><span class="si">%s</span><span class="s2"> with:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.login"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.login">[docs]</a>	<span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="n">mfa</span><span class="p">,</span> <span class="n">mfa_token</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot; login to bitwarden server.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">email</span><span class="p">:</span>
+			<span class="n">email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">email</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">email</span><span class="p">:</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Must give an email address, when not in config.&quot;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">email</span>
+		<span class="n">masterKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">makeKey</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+		<span class="n">masterPasswordHash</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">hashedPassword</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+		<span class="k">del</span> <span class="n">password</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;client login as </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">email</span><span class="p">)</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;identURL:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">identurl</span><span class="p">)</span>
+		<span class="n">url</span> <span class="o">=</span> <span class="n">posixpath</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">identurl</span><span class="p">,</span> <span class="s1">&#39;connect&#39;</span><span class="p">,</span> <span class="s1">&#39;token&#39;</span><span class="p">)</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+		    <span class="s2">&quot;grant_type&quot;</span><span class="p">:</span> <span class="s2">&quot;password&quot;</span><span class="p">,</span>
+		    <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+		    <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">masterPasswordHash</span><span class="p">,</span>
+		    <span class="s2">&quot;scope&quot;</span><span class="p">:</span> <span class="s2">&quot;api offline_access&quot;</span><span class="p">,</span>
+		    <span class="s2">&quot;client_id&quot;</span><span class="p">:</span> <span class="s2">&quot;browser&quot;</span><span class="p">,</span>
+		    <span class="s2">&quot;deviceType&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+		    <span class="s2">&quot;deviceIdentifier&quot;</span><span class="p">:</span> <span class="s2">&quot;aac2e34a-44db-42ab-a733-5322dd582c3d&quot;</span><span class="p">,</span>
+		    <span class="s2">&quot;deviceName&quot;</span><span class="p">:</span> <span class="s2">&quot;firefox&quot;</span><span class="p">,</span>
+		    <span class="s2">&quot;devicePushToken&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="n">mfa</span><span class="p">:</span>
+			<span class="n">data</span><span class="p">[</span><span class="s2">&quot;twoFactorToken&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">mfa_token</span><span class="p">)</span>
+			<span class="n">data</span><span class="p">[</span><span class="s2">&quot;twoFactorProvider&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mfa_map</span><span class="p">[</span><span class="n">mfa</span><span class="p">]</span>
+			<span class="n">data</span><span class="p">[</span><span class="s2">&quot;towFactorRemember&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;POST </span><span class="si">%s</span><span class="s2"> data of:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+		<span class="c1"># log.debug(&quot;returning:%s&quot;, r.text)</span>
+		<span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+			<span class="n">token</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+			<span class="n">token</span><span class="p">[</span><span class="s1">&#39;token_expires&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">token</span><span class="p">[</span><span class="s1">&#39;expires_in&#39;</span><span class="p">]</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">client_token</span> <span class="o">=</span> <span class="n">token</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;token set:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">token</span><span class="p">))</span>
+			<span class="k">if</span> <span class="n">timeout</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">agent_timeout</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="k">elif</span> <span class="n">timeout</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;timeout 0, setting to:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">token</span><span class="p">[</span><span class="s1">&#39;expires_in&#39;</span><span class="p">])</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">agent_timeout</span> <span class="o">=</span> <span class="n">token</span><span class="p">[</span><span class="s1">&#39;expires_in&#39;</span><span class="p">]</span>
+			<span class="k">elif</span> <span class="n">timeout</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">agent_timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;bad timeout </span><span class="si">%s</span><span class="s2">: This should be impossible, please yell @ someone.&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;timeout set to </span><span class="si">%s</span><span class="s2"> because arg was </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">agent_timeout</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">timeout</span><span class="p">))</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">master_key</span> <span class="o">=</span> <span class="n">masterKey</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encryption_key</span> <span class="o">=</span> <span class="n">token</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+			<span class="k">return</span> <span class="kc">True</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;bad client login got </span><span class="si">%s</span><span class="s2"> data returned:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+			          <span class="n">r</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+			<span class="k">return</span> <span class="kc">False</span></div>
+
+	<span class="k">def</span> <span class="nf">_decrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;decrypt a value</span>
+<span class="sd">        assumes input to be a cipherstring of encryption type 2.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">encryptionKey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encryption_key</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">encryptionKey</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;you must run pull first&quot;</span><span class="p">)</span>
+			<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">masterKey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">master_key</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">masterKey</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No agent running! you must login first.&quot;</span><span class="p">)</span>
+			<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">decryptedEncryptionKey</span><span class="p">,</span> <span class="n">macKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">decryptEncryptionKey</span><span class="p">(</span>
+		    <span class="n">encryptionKey</span><span class="p">,</span> <span class="n">masterKey</span><span class="p">)</span>
+		<span class="n">value</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">decryptedEncryptionKey</span><span class="p">,</span> <span class="n">macKey</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">value</span>
+
+<div class="viewcode-block" id="Client.fetchName"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.fetchName">[docs]</a>	<span class="k">def</span> <span class="nf">fetchName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		fetch from local DB cipher entries by name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">nameOnly</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">ret</span><span class="p">:</span>
+			<span class="k">return</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;found more than 1 record, only returning the first.&quot;</span><span class="p">)</span>
+		<span class="n">uuid</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;uuid&#39;</span><span class="p">]</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fetchUUID</span><span class="p">(</span><span class="n">uuid</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.fetchUUID"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.fetchUUID">[docs]</a>	<span class="k">def</span> <span class="nf">fetchUUID</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uuid</span><span class="p">,</span> <span class="n">pwonly</span><span class="p">,</span> <span class="n">decrypt</span><span class="p">,</span> <span class="n">fulldecrypt</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		fetch from local DB cipher entries by UUID</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+		<span class="n">ret</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+		    <span class="s2">&quot;select json from ciphers where uuid=:uuid&quot;</span><span class="p">,</span>
+		    <span class="n">uuid</span><span class="o">=</span><span class="n">uuid</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()[</span><span class="s1">&#39;json&#39;</span><span class="p">]</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">pwonly</span><span class="p">:</span>
+			<span class="n">pw</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Login&#39;</span><span class="p">][</span><span class="s1">&#39;Password&#39;</span><span class="p">]</span>
+			<span class="n">pw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decrypt</span><span class="p">(</span><span class="n">pw</span><span class="p">)</span>
+			<span class="n">ret</span> <span class="o">=</span> <span class="n">pw</span>
+		<span class="k">elif</span> <span class="n">decrypt</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;unimplemented&quot;</span><span class="p">)</span>
+		<span class="k">elif</span> <span class="n">fulldecrypt</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;unimplemented&quot;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">ret</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+			    <span class="n">data</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="Client.find"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.find">[docs]</a>	<span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">nameOnly</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;find stuff&quot;&quot;&quot;</span>
+		<span class="n">ciphers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;select uuid, name, uri from ciphers&quot;</span><span class="p">)</span>
+		<span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="k">for</span> <span class="n">cipher</span> <span class="ow">in</span> <span class="n">ciphers</span><span class="p">:</span>
+			<span class="n">c</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;uuid&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;uri&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+			<span class="n">c</span><span class="p">[</span><span class="s1">&#39;uuid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;uuid&#39;</span><span class="p">]</span>
+			<span class="n">c</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decrypt</span><span class="p">(</span><span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
+			<span class="k">if</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span>
+				<span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">nameOnly</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">]:</span>
+					<span class="n">c</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decrypt</span><span class="p">(</span><span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">])</span>
+					<span class="k">if</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">c</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">]:</span>
+						<span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="Client.slab"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.slab">[docs]</a>	<span class="k">def</span> <span class="nf">slab</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;operate in sudolikeaboss mode&quot;&quot;&quot;</span>
+		<span class="n">encryptionKey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encryption_key</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">encryptionKey</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;you must run pull first&quot;</span><span class="p">)</span>
+			<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">masterKey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">master_key</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">masterKey</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;no agent running!&quot;</span><span class="p">)</span>
+			<span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">decryptedEncryptionKey</span><span class="p">,</span> <span class="n">macKey</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">decryptEncryptionKey</span><span class="p">(</span>
+		    <span class="n">encryptionKey</span><span class="p">,</span> <span class="n">masterKey</span><span class="p">)</span>
+		<span class="n">qry</span> <span class="o">=</span> <span class="s2">&quot;SELECT uuid, name, uri from ciphers&quot;</span>
+		<span class="n">choices</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="n">choiceMap</span> <span class="o">=</span> <span class="p">{}</span>
+		<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">qry</span><span class="p">):</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+			<span class="k">try</span><span class="p">:</span>
+				<span class="k">if</span> <span class="ow">not</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">]:</span>
+					<span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="n">url</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;uri&#39;</span><span class="p">],</span> <span class="n">decryptedEncryptionKey</span><span class="p">,</span>
+				                     <span class="n">macKey</span><span class="p">)</span>
+			<span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+				<span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+				    <span class="s2">&quot;select json from ciphers where uuid=:uuid&quot;</span><span class="p">,</span>
+				    <span class="n">uuid</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;uuid&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">first</span><span class="p">()[</span><span class="s1">&#39;json&#39;</span><span class="p">]</span>
+				<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+				    <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+				        <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+				        <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+				        <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+				        <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+				<span class="k">continue</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+			<span class="k">if</span> <span class="s1">&#39;sudolikeaboss://&#39;</span> <span class="ow">in</span> <span class="n">url</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]:</span>
+					<span class="n">name</span> <span class="o">=</span> <span class="n">crypto</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">decryptedEncryptionKey</span><span class="p">,</span>
+					                      <span class="n">macKey</span><span class="p">)</span>
+					<span class="n">choices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+					<span class="n">choiceMap</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;uuid&#39;</span><span class="p">]</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;choices:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">choices</span><span class="p">)</span>
+		<span class="n">selected</span> <span class="o">=</span> <span class="n">slab</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">slab_location</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">selected</span><span class="p">:</span>
+			<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;no choice selected&quot;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="kc">None</span>
+		<span class="n">selectedUUID</span> <span class="o">=</span> <span class="n">choiceMap</span><span class="p">[</span><span class="n">selected</span><span class="p">]</span>
+		<span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+		    <span class="s2">&quot;select json from ciphers where uuid=:uuid&quot;</span><span class="p">,</span>
+		    <span class="n">uuid</span><span class="o">=</span><span class="n">selectedUUID</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;json&#39;</span><span class="p">])</span>
+		<span class="n">password</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Login&#39;</span><span class="p">][</span><span class="s1">&#39;Password&#39;</span><span class="p">]</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+		    <span class="n">crypto</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">decryptedEncryptionKey</span><span class="p">,</span> <span class="n">macKey</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="Client.pull"><a class="viewcode-back" href="../../internals.html#bitwarden.client.Client.pull">[docs]</a>	<span class="k">def</span> <span class="nf">pull</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;pull from remote server&quot;&quot;&quot;</span>
+		<span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">client_token</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">token</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;You must login first.&quot;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">token</span><span class="p">[</span><span class="s1">&#39;token_expires&#39;</span><span class="p">]:</span>
+			<span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;Token has expired, please login again.&quot;</span><span class="p">)</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;url base:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+		<span class="n">url</span> <span class="o">=</span> <span class="n">posixpath</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="s1">&#39;sync&#39;</span><span class="p">)</span>
+		<span class="n">header</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="s2">&quot;Bearer </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">token</span><span class="p">[</span><span class="s1">&#39;access_token&#39;</span><span class="p">])}</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sync call to:</span><span class="si">%s</span><span class="s2"> with header:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
+		<span class="n">ret</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">header</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+		<span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;sync returned:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">ret</span><span class="p">))</span>
+		<span class="n">EncryptedEncryptionKey</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="s1">&#39;Profile&#39;</span><span class="p">][</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encryption_key</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">encryption_key</span> <span class="o">=</span> <span class="n">EncryptedEncryptionKey</span>
+		<span class="k">for</span> <span class="n">cipher</span> <span class="ow">in</span> <span class="n">ret</span><span class="p">[</span><span class="s1">&#39;Ciphers&#39;</span><span class="p">]:</span>
+			<span class="k">try</span><span class="p">:</span>
+				<span class="n">uri</span> <span class="o">=</span> <span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;Data&#39;</span><span class="p">][</span><span class="s1">&#39;Uri&#39;</span><span class="p">]</span>
+			<span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+				<span class="n">uri</span> <span class="o">=</span> <span class="kc">None</span>
+			<span class="n">uuid</span> <span class="o">=</span> <span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;Id&#39;</span><span class="p">]</span>
+			<span class="n">update</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+			    <span class="s2">&quot;select uuid from ciphers where uuid=:uuid&quot;</span><span class="p">,</span>
+			    <span class="n">uuid</span><span class="o">=</span><span class="n">uuid</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+			<span class="k">if</span> <span class="n">update</span><span class="p">:</span>
+				<span class="c1"># pylint: disable=C0301</span>
+				<span class="c1"># pylint: disable=C0301</span>
+				<span class="n">qry</span> <span class="o">=</span> <span class="s2">&quot;update ciphers set name=:name, uri=:uri, json=:json, updated_at=DATETIME(&#39;NOW&#39;) where uuid=:uuid&quot;</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">qry</span> <span class="o">=</span> <span class="s2">&quot;insert into ciphers (uuid,  name, uri, json, created_at, updated_at) VALUES (:uuid, :name,:uri,:json,DATETIME(&#39;NOW&#39;),DATETIME(&#39;NOW&#39;))&quot;</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+			    <span class="n">qry</span><span class="p">,</span>
+			    <span class="n">uuid</span><span class="o">=</span><span class="n">uuid</span><span class="p">,</span>
+			    <span class="n">name</span><span class="o">=</span><span class="n">cipher</span><span class="p">[</span><span class="s1">&#39;Name&#39;</span><span class="p">],</span>
+			    <span class="n">uri</span><span class="o">=</span><span class="n">uri</span><span class="p">,</span>
+			    <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">cipher</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">last_sync_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">asctime</span><span class="p">()</span>
+		<span class="k">return</span> <span class="s2">&quot;pull finished&quot;</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
