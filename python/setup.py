@@ -33,17 +33,11 @@ setup(
     long_description=readme(),
     license="MIT",
     url="https://fossil.birl.ca/bitwarden-cli/doc/trunk/README.txt",
-    classifiers=[],
-    install_requires=[
-        "click==6.7",
-        "cryptography==2.2.2",
-        "psutil==5.4.3",
-        "pystandardpaths==0.3.2",
-        "records==0.5.2",
-        "requests==2.18.4",
-        "tablib==0.12.1",
-        "python-daemon"
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
     ],
+    install_requires=read_requirements('requirements.txt'),
     # install_requires=read_requirements('requirements.txt'),
     tests_require=read_requirements('requirements-tests-py3.txt'),
     packages=[

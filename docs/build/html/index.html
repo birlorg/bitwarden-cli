@@ -33,32 +33,31 @@
   <div class="section" id="welcome-to-bitwarden-cli-s-documentation">
 <h1>Welcome to Bitwarden CLI’s documentation!<a class="headerlink" href="#welcome-to-bitwarden-cli-s-documentation" title="Permalink to this headline">¶</a></h1>
 <p>Cross Platform Bitwarden library and CLI with sudolikeaboss functionality.</p>
-<p>This repo houses both python and rust versions.</p>
-<p>STATUS: python version works, rust version does not fully work yet (pull
-requests, patches, etc welcome)
-patches, bug reports and code welcome.
-the python version is meant as an MVP.
-Unknown at this time if the python version will just call out to rust
-or if rust will entirely replace python.
-at the very least the agent should exist in rust, and not python.</p>
-<p>source repo lives &#64; <a class="reference external" href="https://fossil.birl.ca/bitwarden-cli/home">https://fossil.birl.ca/bitwarden-cli/home</a>
+<p>Source repo lives &#64; <a class="reference external" href="https://fossil.birl.ca/bitwarden-cli/home">https://fossil.birl.ca/bitwarden-cli/home</a>
 But is mirrored to github:
-<a class="reference external" href="https://github.com/birlorg/bitwarden-cli">https://github.com/birlorg/bitwarden-cli</a>
-Historic fun fact: all crypto code had to be stored outside
+<a class="reference external" href="https://github.com/birlorg/bitwarden-cli">https://github.com/birlorg/bitwarden-cli</a></p>
+<p>The repository houses both rust and python versions. The python version is more feature complete,
+and is meant as a useable proof of concept or minimally viable program. It’s still up for decision
+how much functionality will be in the rust version, at least the crypto and the agent will be fully implemented.
+Ideally the entire program would be in Rust, but rust is still a very new language and all the magic happy
+libraries one might want are not as fleshed out as the very mature python ecosystem.</p>
+<p>This program, documentation, sources, etc. currently have no relationship with Bitwarden proper,
+other than the main author pays a Families subscription fee, despite my actual Ciphers being stored in an off-line
+self-hosted version of Bitwarden. Just because bitwarden <em>can</em> run over the public internet doesn’t mean it has to.</p>
+<p>Historic fun fact: all crypto code needed to be written and stored outside
 of the USA at one time.</p>
 <dl class="docutils">
 <dt>Goals:</dt>
 <dd><ul class="first last simple">
-<li>be a useful bitwarden tool that works on openBSD, debian, macOS and windows
-since these are the platforms I spend most of my time on.  UI is abysmal,
-thanks to &#64;kspearrin for doing that slog, go pay him, I do.</li>
+<li>Be a useful bitwarden tool that works on Windows and Modern POSIX(macOS, BSD, Linux, etc) platforms.</li>
 <li>Be able to work off-line completely if you wish. This mostly works now.</li>
 </ul>
 </dd>
 <dt>Non-Goals:</dt>
-<dd><ul class="first last simple">
-<li>GUI’s because writing them is misery. &#64;kspearrin has this well-handled! YAY!</li>
+<dd><ul class="first simple">
+<li>GUI’s because writing them is misery. Bitwarden writes these for us, go pay</li>
 </ul>
+<p class="last">them (regardless of self-hosted or not), I do.</p>
 </dd>
 </dl>
 <p>The idea behind the CLI here is to think of the server as a place to push / pull
@@ -92,6 +91,13 @@ usage patterns.</p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="security.html">Security</a></li>
+<li class="toctree-l1"><a class="reference internal" href="crypto.html">Cryptography</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="crypto.html#cipherstrings">CipherStrings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="crypto.html#getting-a-decryptionkey-and-mackey">Getting a decryptionKey and macKey</a></li>
+<li class="toctree-l2"><a class="reference internal" href="crypto.html#decryption">Decryption</a></li>
+<li class="toctree-l2"><a class="reference internal" href="crypto.html#encryption">Encryption</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 </ul>
 </div>

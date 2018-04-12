@@ -6,7 +6,6 @@ cryptography==2.2.2
 psutil==5.4.3
 pystandardpaths==0.3.2
 python-daemon==2.1.2
-pytz==2018.3
 records==0.5.2
 requests==2.18.4
 tablib==0.12.1

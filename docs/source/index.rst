@@ -7,32 +7,30 @@ Welcome to Bitwarden CLI's documentation!
 =========================================
 Cross Platform Bitwarden library and CLI with sudolikeaboss functionality.
 
-This repo houses both python and rust versions.
-
-STATUS: python version works, rust version does not fully work yet (pull
-requests, patches, etc welcome) 
-patches, bug reports and code welcome.
-the python version is meant as an MVP.
-Unknown at this time if the python version will just call out to rust
-or if rust will entirely replace python.
-at the very least the agent should exist in rust, and not python.
-
-source repo lives @ https://fossil.birl.ca/bitwarden-cli/home 
+Source repo lives @ https://fossil.birl.ca/bitwarden-cli/home 
 But is mirrored to github: 
 https://github.com/birlorg/bitwarden-cli
-Historic fun fact: all crypto code had to be stored outside 
+
+The repository houses both rust and python versions. The python version is more feature complete,
+and is meant as a useable proof of concept or minimally viable program. It's still up for decision
+how much functionality will be in the rust version, at least the crypto and the agent will be fully implemented.
+Ideally the entire program would be in Rust, but rust is still a very new language and all the magic happy 
+libraries one might want are not as fleshed out as the very mature python ecosystem.
+
+This program, documentation, sources, etc. currently have no relationship with Bitwarden proper,
+other than the main author pays a Families subscription fee, despite my actual Ciphers being stored in an off-line
+self-hosted version of Bitwarden. Just because bitwarden *can* run over the public internet doesn't mean it has to.
+
+Historic fun fact: all crypto code needed to be written and stored outside 
 of the USA at one time.
 
-
 Goals:
-  * be a useful bitwarden tool that works on openBSD, debian, macOS and windows
-    since these are the platforms I spend most of my time on.  UI is abysmal,
-    thanks to @kspearrin for doing that slog, go pay him, I do.
+  * Be a useful bitwarden tool that works on Windows and Modern POSIX(macOS, BSD, Linux, etc) platforms.
   * Be able to work off-line completely if you wish. This mostly works now.
 
 Non-Goals:
- * GUI's because writing them is misery. @kspearrin has this well-handled! YAY!
-
+ * GUI's because writing them is misery. Bitwarden writes these for us, go pay
+ them (regardless of self-hosted or not), I do.
 
 The idea behind the CLI here is to think of the server as a place to push / pull
 againt.  The local copy of the DB should be resilient and not erase anything
@@ -52,6 +50,7 @@ usage patterns.
   installation
   commands
   security
+  crypto
   troubleshooting
 
 API Reference
