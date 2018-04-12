@@ -23,16 +23,17 @@ import sys
 import click
 import standardpaths  # https://github.com/uranusjr/pystandardpaths
 import tablib  # http://docs.python-tablib.org/en/master/
+import click_log
 import bitwarden.db
 import bitwarden.client as client
 
 click.disable_unicode_literals_warning = True
 
-logging.basicConfig()
-LOG = logging.getLogger(__name__)
-BITWARDEN_LOG = logging.getLogger("bitwarden")
-BITWARDEN_LOG.setLevel(logging.INFO)
-BITWARDEN_LOG.propagate = True
+log = logging.getLogger(__name__)
+click_log.basic_config(log)
+BITWARDEN_log = logging.getLogger("bitwarden")
+BITWARDEN_log.setLevel(logging.INFO)
+BITWARDEN_log.propagate = True
 
 standardpaths.configure(
     application_name='bitwarden', organization_name='birl.org')
@@ -45,10 +46,10 @@ class CLI():
 		"""initialize"""
 		self.debug = debug
 		if self.debug:
-			BITWARDEN_LOG.setLevel(logging.DEBUG)
-			LOG.setLevel(logging.DEBUG)
-			LOG.debug("debug turned on")
-		LOG.debug("db:%s", dbURL)
+			BITWARDEN_log.setLevel(logging.DEBUG)
+			log.setLevel(logging.DEBUG)
+			log.debug("debug turned on")
+		log.debug("db:%s", dbURL)
 		self.db = bitwarden.db.connect(dbURL)
 		self.dbURL = dbURL
 		self.config = bitwarden.db.Config(self.db)
@@ -61,6 +62,7 @@ class CLI():
 
 @click.group()
 # default for URL is in the db.py file, so it will not be changed if already set..
+@click_log.simple_verbosity_option(log)
 @click.option(
     '--url', envvar='BITWARDEN_URL', required=False, default=None)
 @click.option(
@@ -99,7 +101,7 @@ def cli(ctx, url, identurl, debug, db):
 @click.pass_obj
 def register(cli, email, password, name, hint):
 	"""register a new account on server."""
-	LOG.debug("registering as:%s", email)
+	log.debug("registering as:%s", email)
 	cli.client.register(email, password, name, hint)
 	del password
 
@@ -152,7 +154,7 @@ MFA Support:
         * --url and --identurl are saved for you, so you only have
             to define them one time.
     """ # yapf: disable
-	# LOG.debug("login as:%s", email)
+	# log.debug("login as:%s", email)
 	if mfa and not mfa_token:
 		mfa_token = click.prompt('Please enter your token')
 	cli.client.login(email, password, timeout, mfa, mfa_token)
@@ -176,7 +178,7 @@ def emtpydb(cli):
     """
 	for table in cli.db.get_table_names():
 		cli.db.query("delete from :tablename", tablename=table)
-		LOG.debug("all data erased from %s", table)
+		log.debug("all data erased from %s", table)
 
 
 @cli.command()
@@ -322,7 +324,7 @@ def find(cli, query, fmt, headers):
 			try:
 				dataset.append(row.values())
 			except tablib.core.InvalidDimensions:
-				LOG.error("can not add row:%s", row)
+				log.error("can not add row:%s", row)
 		if fmt:
 			click.echo(dataset.export(fmt))
 		else:
@@ -391,7 +393,7 @@ def sql(cli, query, params, fmt):
 @click.pass_obj
 def pull(cli):
 	"""pull all records from server, updating local store as needed."""
-	# LOG.debug("login as:%s", email)
+	# log.debug("login as:%s", email)
 	cli.client.pull()
 
 
@@ -399,7 +401,7 @@ def pull(cli):
 @click.pass_obj
 def logout(cli):
 	"""logout from server, stop agent and forget all secret keys."""
-	# LOG.debug("login as:%s", email)
+	# log.debug("login as:%s", email)
 	cli.config.master_key = None
 	cli.config.token = None
 	print("logged out, forgotten master_key and remote access_token.")
@@ -475,7 +477,7 @@ will set the login email to nobody@example.com
 	else:
 		dataset.headers = ("key", "value")
 	if key:
-		LOG.debug("looking up value for %s", key)
+		log.debug("looking up value for %s", key)
 		if not key.startswith('__') and key not in skip:
 			if value:
 				old = cli.config.get(key)
@@ -488,7 +490,7 @@ will set the login email to nobody@example.com
 	else:
 		for key in dir(cli.config):
 			if key.startswith('__') or key in skipAllList:
-				LOG.debug("skipping from list:%s", key)
+				log.debug("skipping from list:%s", key)
 				continue
 			dataset.append((key, cli.config.get(key)))
 	if fmt:

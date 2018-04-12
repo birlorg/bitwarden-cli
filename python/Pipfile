@@ -11,11 +11,12 @@ requests = "*"
 records = "*"
 cryptography = "*"
 click = "*"
+click-log = "*"
 webpy = {git = "https://github.com/webpy/webpy"}
 python-daemon = "*"
 psutil = "*"
 pystandardpaths = "*"
-sphinx = "*"
+click-man = "*"
 
 
 [dev-packages]
@@ -23,3 +24,5 @@ sphinx = "*"
 pytest = "*"
 pylint = "*"
 yapf = "*"
+sphinx = "*"
+sphinx-click = "*"
