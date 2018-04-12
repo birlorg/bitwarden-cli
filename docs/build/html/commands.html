@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Commands &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <title>Bitwarden CLI &#8212; Bitwarden CLI 0.3.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" src="_static/documentation_options.js"></script>
@@ -31,8 +31,553 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="commands">
-<span id="id1"></span><h1>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="bitwarden-cli">
+<span id="program"></span><h1>Bitwarden CLI<a class="headerlink" href="#bitwarden-cli" title="Permalink to this headline">¶</a></h1>
+<p>This is the interactive help all layed out here nice and handy.</p>
+<div class="section" id="bitwarden">
+<h2>bitwarden<a class="headerlink" href="#bitwarden" title="Permalink to this headline">¶</a></h2>
+<p>Bitwarden CLI program.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bitwarden <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-bitwarden-url">
+<code class="descname">--url</code><code class="descclassname"> &lt;url&gt;</code><a class="headerlink" href="#cmdoption-bitwarden-url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-bitwarden-identurl">
+<code class="descname">--identurl</code><code class="descclassname"> &lt;identurl&gt;</code><a class="headerlink" href="#cmdoption-bitwarden-identurl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-bitwarden-debug">
+<code class="descname">--debug</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--no-debug</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-bitwarden-debug" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-bitwarden-db">
+<code class="descname">--db</code><code class="descclassname"> &lt;db&gt;</code><a class="headerlink" href="#cmdoption-bitwarden-db" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-bitwarden-version">
+<code class="descname">--version</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-bitwarden-version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the version and exit.</p>
+</dd></dl>
+
+<p class="rubric">Environment variables</p>
+<dl class="envvar">
+<dt id="envvar-BITWARDEN_URL">
+<code class="descname">BITWARDEN_URL</code><a class="headerlink" href="#envvar-BITWARDEN_URL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a default for <a class="reference internal" href="#cmdoption-bitwarden-url"><code class="xref std std-option docutils literal notranslate"><span class="pre">--url</span></code></a></p>
+</dd></dl>
+
+<dl class="envvar">
+<dt id="envvar-BITWARDEN_IDENT_URL">
+<code class="descname">BITWARDEN_IDENT_URL</code><a class="headerlink" href="#envvar-BITWARDEN_IDENT_URL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a default for <a class="reference internal" href="#cmdoption-bitwarden-identurl"><code class="xref std std-option docutils literal notranslate"><span class="pre">--identurl</span></code></a></p>
+</dd></dl>
+
+<dl class="envvar">
+<dt id="envvar-DEBUG">
+<code class="descname">DEBUG</code><a class="headerlink" href="#envvar-DEBUG" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a default for <a class="reference internal" href="#cmdoption-bitwarden-debug"><code class="xref std std-option docutils literal notranslate"><span class="pre">--debug</span></code></a></p>
+</dd></dl>
+
+<dl class="envvar">
+<dt id="envvar-BITWARDEN_DB">
+<code class="descname">BITWARDEN_DB</code><a class="headerlink" href="#envvar-BITWARDEN_DB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a default for <a class="reference internal" href="#cmdoption-bitwarden-db"><code class="xref std std-option docutils literal notranslate"><span class="pre">--db</span></code></a></p>
+</dd></dl>
+
+<p class="rubric">Commands</p>
+<dl class="object">
+<dt>
+<code class="descname">config</code></dt>
+<dd><p>View and set bitwarden config items.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">emtpydb</code></dt>
+<dd><p>Flush and empty the database of all values.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">fetch_name</code></dt>
+<dd><p>fetch by name.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">fetch_uuid</code></dt>
+<dd><p>fetch by UUID.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">find</code></dt>
+<dd><p>find query in username,uri this does a simpe…</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">login</code></dt>
+<dd><p>login to server; MFA optional.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">logout</code></dt>
+<dd><p>logout from server, stop agent and forget all…</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">pull</code></dt>
+<dd><p>pull all records from server, updating local…</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">register</code></dt>
+<dd><p>register a new account on server.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">slab</code></dt>
+<dd><p>run in slab mode.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">sql</code></dt>
+<dd><p>query the local data store using SQL.</p>
+</dd></dl>
+
+<dl class="object">
+<dt>
+<code class="descname">status</code></dt>
+<dd><p>Show various statistics.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="commands">
+<h1>Commands:<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="login">
+<h2>login<a class="headerlink" href="#login" title="Permalink to this headline">¶</a></h2>
+<p>login to server; MFA optional.</p>
+<blockquote>
+<div><p>–timeout is how long the agent should run for in seconds.
+By default (value of 0) timeout will be set to the length of the login
+access token defined by the server.
+If set to a negative value (say -t -1) then the agent
+will never stop, until you call the logout command.</p>
+<p>email is optional, as it remembers the email from previous logins.</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>MFA Support:</dt>
+<dd><p class="first">–mfa is optional, if you turn it on and don’t specify –mfa_token it will
+prompt you.  None of these modes do anything
+other than let you specify the MFA token to send. so DUO and email may not work.</p>
+<dl class="last docutils">
+<dt>example:</dt>
+<dd><p class="first">$ bitwarden login <a class="reference external" href="mailto:nobody&#37;&#52;&#48;example&#46;com">nobody<span>&#64;</span>example<span>&#46;</span>com</a>
+Password:</p>
+<p>self hosted (bitwarden-ruby or bitwarden-go):</p>
+<p>login to a self-hosted server at bitwarden.example.com URL. With an
+8hr agent timeout(so you can work offline all day).</p>
+<p class="last">bitwarden –url <a class="reference external" href="https://bitwarden.example.com/api">https://bitwarden.example.com/api</a> –identurl
+<a class="reference external" href="https://bitwarden.example.com/identity">https://bitwarden.example.com/identity</a> login <a class="reference external" href="mailto:nobody&#37;&#52;&#48;example&#46;com">nobody<span>&#64;</span>example<span>&#46;</span>com</a>
+–timeout 28800</p>
+</dd>
+<dt>NOTES:</dt>
+<dd><ul class="first simple">
+<li>if you login to a self-hosted instance, you <em>MUST</em> set both</li>
+</ul>
+<p>–url and –identurl see above example for likely settings.
+* –timeout does not change the access token server timeout.</p>
+<blockquote>
+<div>so server operations may require you to re-login.</div></blockquote>
+<ul class="last simple">
+<li><dl class="first docutils">
+<dt>–url and –identurl are saved for you, so you only have</dt>
+<dd>to define them one time.</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>login <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>EMAIL<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-login-t">
+<code class="descname">-t</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--timeout</code><code class="descclassname"> &lt;timeout&gt;</code><a class="headerlink" href="#cmdoption-login-t" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-login-password">
+<code class="descname">--password</code><code class="descclassname"> &lt;password&gt;</code><a class="headerlink" href="#cmdoption-login-password" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-login-mfa">
+<code class="descname">--mfa</code><code class="descclassname"> &lt;mfa&gt;</code><a class="headerlink" href="#cmdoption-login-mfa" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-login-mfa-token">
+<code class="descname">--mfa_token</code><code class="descclassname"> &lt;mfa_token&gt;</code><a class="headerlink" href="#cmdoption-login-mfa-token" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-login-arg-email">
+<code class="descname">EMAIL</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-login-arg-email" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="logout">
+<h2>logout<a class="headerlink" href="#logout" title="Permalink to this headline">¶</a></h2>
+<p>logout from server, stop agent and forget all secret keys.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">logout</span> <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="register">
+<h2>register<a class="headerlink" href="#register" title="Permalink to this headline">¶</a></h2>
+<p>register a new account on server.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>register <span class="o">[</span>OPTIONS<span class="o">]</span> EMAIL
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-register-password">
+<code class="descname">--password</code><code class="descclassname"> &lt;password&gt;</code><a class="headerlink" href="#cmdoption-register-password" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-register-hint">
+<code class="descname">--hint</code><code class="descclassname"> &lt;hint&gt;</code><a class="headerlink" href="#cmdoption-register-hint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-register-name">
+<code class="descname">--name</code><code class="descclassname"> &lt;name&gt;</code><a class="headerlink" href="#cmdoption-register-name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-register-arg-email">
+<code class="descname">EMAIL</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-register-arg-email" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+<p class="rubric">Environment variables</p>
+<dl class="envvar">
+<dt id="envvar-USER">
+<code class="descname">USER</code><a class="headerlink" href="#envvar-USER" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a default for <a class="reference internal" href="#cmdoption-register-name"><code class="xref std std-option docutils literal notranslate"><span class="pre">--name</span></code></a></p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="pull">
+<h2>pull<a class="headerlink" href="#pull" title="Permalink to this headline">¶</a></h2>
+<p>pull all records from server, updating local store as needed.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pull <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="config">
+<h2>config<a class="headerlink" href="#config" title="Permalink to this headline">¶</a></h2>
+<p>View and set bitwarden config items.</p>
+<blockquote>
+<div><p>no arguments will list all keys and their values.
+1 argument will show the value for that key
+with 2 args will set a value for that key.</p>
+<p>2 items are not shown in the all list, because their values are “sensitive”:
+(‘client_token’, ‘encryption_key’)</p>
+<p>client_token is the JSON value returned from the login command and
+encryption key is the encypted symmetric key (requires the master key to
+decrypt, which is stored in the agent)</p>
+<p>You can view these if you specifically ask for them (and even set their
+values) but setting the values by hand is almost always a bad idea, you
+have been warned.</p>
+<p>You can of course format the output any way you so choose.
+Why you would want the output in XLS format is beyond me.</p>
+</div></blockquote>
+<p>
+NOTES:
+———-</p>
+<p>Default values are computed at runtime and are not shown here.</p>
+<p>
+EXAMPLES:
+—————-</p>
+<p>
+bitwarden config email
+key  <a href="#id3"><span class="problematic" id="id4">|value
+-----|</span></a>————
+<a class="reference external" href="mailto:email|nobody&#37;&#52;&#48;example&#46;com">email|nobody<span>&#64;</span>example<span>&#46;</span>com</a></p>
+<p>show the email setting.</p>
+<p>
+bitwarden config email <a class="reference external" href="mailto:somebodylovesme&#37;&#52;&#48;example&#46;com">somebodylovesme<span>&#64;</span>example<span>&#46;</span>com</a>
+key  <a href="#id5"><span class="problematic" id="id6">|old value         |new value
+-----|</span></a>——————<a href="#id1"><span class="problematic" id="id2">|</span></a>—————————
+<a class="reference external" href="mailto:email|nobody&#37;&#52;&#48;example">email|nobody<span>&#64;</span>example</a>.com|somebodylovesme&#64;example.com</p>
+<p>will set the login email to <a class="reference external" href="mailto:nobody&#37;&#52;&#48;example&#46;com">nobody<span>&#64;</span>example<span>&#46;</span>com</a></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>config <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>KEY<span class="o">]</span> <span class="o">[</span>VALUE<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-config-f">
+<code class="descname">-f</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--fmt</code><code class="descclassname"> &lt;fmt&gt;</code><a class="headerlink" href="#cmdoption-config-f" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-config-arg-key">
+<code class="descname">KEY</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-config-arg-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-config-arg-value">
+<code class="descname">VALUE</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-config-arg-value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="fetch-name">
+<h2>fetch_name<a class="headerlink" href="#fetch-name" title="Permalink to this headline">¶</a></h2>
+<p>fetch by name.</p>
+<p>This will be relatively slow, as it has to decrypt every single name
+to compare before it finds the right one.</p>
+<p>–pwonly (or -p) will return ONLY the password, in decrypted form.
+–decrypted (or -d) will return the json object with all</p>
+<blockquote>
+<div>encrypted fields decrypted, except the password.</div></blockquote>
+<dl class="docutils">
+<dt>–fulldecrypt just like –decrypted, except will return</dt>
+<dd>the password decrypted as well.</dd>
+</dl>
+<p>output format is always pretty printed JSON, unless –pwonly is set.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fetch_name <span class="o">[</span>OPTIONS<span class="o">]</span> NAME
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-fetch-name-p">
+<code class="descname">-p</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--pwonly</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-name-p" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-fetch-name-d">
+<code class="descname">-d</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--decrypt</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--no-decrypt</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-name-d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-fetch-name-fulldecrypt">
+<code class="descname">--fulldecrypt</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-name-fulldecrypt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-fetch-name-arg-name">
+<code class="descname">NAME</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-name-arg-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="fetch-uuid">
+<h2>fetch_uuid<a class="headerlink" href="#fetch-uuid" title="Permalink to this headline">¶</a></h2>
+<p>fetch by UUID.</p>
+<p>This will be quite fast, as it only has to decrypt 1 cipher record.</p>
+<p>–pwonly (or -p) will return ONLY the password, in decrypted form.
+–decrypted (or -d) will return the json object with all</p>
+<blockquote>
+<div>encrypted fields decrypted, except the password.</div></blockquote>
+<dl class="docutils">
+<dt>–fulldecrypt just like –decrypted, except will return</dt>
+<dd>the password decrypted as well.</dd>
+</dl>
+<p>output format is always pretty printed JSON, unless –pwonly is set.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fetch_uuid <span class="o">[</span>OPTIONS<span class="o">]</span> UUID
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-fetch-uuid-p">
+<code class="descname">-p</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--pwonly</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-uuid-p" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-fetch-uuid-d">
+<code class="descname">-d</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--decrypt</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--no-decrypt</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-uuid-d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-fetch-uuid-fulldecrypt">
+<code class="descname">--fulldecrypt</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-uuid-fulldecrypt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-fetch-uuid-arg-uuid">
+<code class="descname">UUID</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-fetch-uuid-arg-uuid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="find">
+<h2>find<a class="headerlink" href="#find" title="Permalink to this headline">¶</a></h2>
+<p>find query in username,uri</p>
+<blockquote>
+<div><p>this does a simpe python string find i.e.:</p>
+<blockquote>
+<div>if query in username:</div></blockquote>
+<p>but searches against username and first url</p>
+<p>You can export it in almost any format you wish with -f</p>
+<p>to get the password once you found an entry use fetch_uuid</p>
+<p>complicated example:</p>
+<p>
+bw find example.com -f tsv –no-headers | fzf | cut -f 1 | xargs bitwarden fetch_uuid -p</p>
+</div></blockquote>
+<p>which means: find all entries with example.com in them, using fzf
+to select a record and return only the password.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>find <span class="o">[</span>OPTIONS<span class="o">]</span> QUERY
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-find-f">
+<code class="descname">-f</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--fmt</code><code class="descclassname"> &lt;fmt&gt;</code><a class="headerlink" href="#cmdoption-find-f" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-find-headers">
+<code class="descname">--headers</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--no-headers</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-find-headers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-find-arg-query">
+<code class="descname">QUERY</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-find-arg-query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="slab">
+<h2>slab<a class="headerlink" href="#slab" title="Permalink to this headline">¶</a></h2>
+<p>run in slab mode.</p>
+<blockquote>
+<div>iterm2 coprocess command:</div></blockquote>
+<p>export LANG=en_CA.UTF-8;export LOCALE=en_CA.UTF-8; /usr/local/bin/bitwarden slab</p>
+<blockquote>
+<div><p>You may need to change the LOCAL and LANG settings and the path above.</p>
+<blockquote>
+<div>which bitwarden</div></blockquote>
+<p>should get you the path. and echo $LANG should get you the locale and lang
+settings.</p>
+<p>slab mode searches and displays only uri’s that equal:
+sudolikeaboss://local</p>
+<blockquote>
+<div><p>To use FZF:
+
+bw config slab_location <cite>which fzf</cite></p>
+<p>and it will work with fzf if you want. or  any other chooser.</p>
+</div></blockquote>
+<p>I recommend: brew install choose-gui. and then bitwarden slab will be all
+the more amazing. more info on the chooser here:
+<a class="reference external" href="https://github.com/sdegutis/choose">https://github.com/sdegutis/choose</a></p>
+</div></blockquote>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>slab <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="status">
+<h2>status<a class="headerlink" href="#status" title="Permalink to this headline">¶</a></h2>
+<p>Show various statistics.</p>
+<p>Advanced examples:
+get last sync time:</p>
+<blockquote>
+<div>bw status | grep Sync| cut -f 2</div></blockquote>
+<dl class="docutils">
+<dt>get agent pid if it is running:</dt>
+<dd>bw status | grep PID | cut -f 2</dd>
+</dl>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>status <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="sql">
+<h2>sql<a class="headerlink" href="#sql" title="Permalink to this headline">¶</a></h2>
+<p>query the local data store using SQL.</p>
+<p>Basically just a wrapper around the records CLI
+see <a class="reference external" href="https://github.com/kennethreitz/records">https://github.com/kennethreitz/records</a> for more info.</p>
+<p>you can get the results back in pretty much any format you wish
+with –fmt:
+[‘csv’, ‘tsv’, ‘json’, ‘yaml’, ‘html’, ‘xls’, ‘xlsx’, ‘dbf’, ‘latex’, ‘ods’]),</p>
+<p>Query: can either be a filename to run or a SQL query string.</p>
+<dl class="docutils">
+<dt>Query Parameters:</dt>
+<dd><p class="first">Query parameters can be specified in key=value format, and injected
+into your query in :key format e.g.:</p>
+<p class="last">
+$ bitwarden sql ‘select created_at from ciphers where uuid ~= :uuid’ -p uuid=84c1bf0a-b0e8-49c4-8e58-8d0fc0a247c4</p>
+</dd>
+<dt>Examples:</dt>
+<dd><dl class="first last docutils">
+<dt>show all uuid entries:</dt>
+<dd>bw sql “select uuid from ciphers where uuid is not null”</dd>
+<dt>show all local config settings and their values if they are defined:</dt>
+<dd>bw sql “select key, value from config” -f tsv</dd>
+</dl>
+</dd>
+</dl>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sql <span class="o">[</span>OPTIONS<span class="o">]</span> QUERY
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-sql-p">
+<code class="descname">-p</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--params</code><code class="descclassname"> &lt;params&gt;</code><a class="headerlink" href="#cmdoption-sql-p" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-sql-f">
+<code class="descname">-f</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--fmt</code><code class="descclassname"> &lt;fmt&gt;</code><a class="headerlink" href="#cmdoption-sql-f" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-sql-arg-query">
+<code class="descname">QUERY</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-sql-arg-query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
 </div>
 
 
@@ -40,7 +585,29 @@
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Bitwarden CLI</a><ul>
+<li><a class="reference internal" href="#bitwarden">bitwarden</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#commands">Commands:</a><ul>
+<li><a class="reference internal" href="#login">login</a></li>
+<li><a class="reference internal" href="#logout">logout</a></li>
+<li><a class="reference internal" href="#register">register</a></li>
+<li><a class="reference internal" href="#pull">pull</a></li>
+<li><a class="reference internal" href="#config">config</a></li>
+<li><a class="reference internal" href="#fetch-name">fetch_name</a></li>
+<li><a class="reference internal" href="#fetch-uuid">fetch_uuid</a></li>
+<li><a class="reference internal" href="#find">find</a></li>
+<li><a class="reference internal" href="#slab">slab</a></li>
+<li><a class="reference internal" href="#status">status</a></li>
+<li><a class="reference internal" href="#sql">sql</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>

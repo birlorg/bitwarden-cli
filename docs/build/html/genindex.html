@@ -34,7 +34,8 @@
 <h1 id="index">Index</h1>
 
 <div class="genindex-jumpbox">
- <a href="#A"><strong>A</strong></a>
+ <a href="#Symbols"><strong>Symbols</strong></a>
+ | <a href="#A"><strong>A</strong></a>
  | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
@@ -43,16 +44,159 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
+<h2 id="Symbols">Symbols</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    --db &lt;db&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-db">bitwarden command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --debug, --no-debug
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-debug">bitwarden command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --fulldecrypt
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-name-fulldecrypt">fetch_name command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-fulldecrypt">fetch_uuid command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --headers, --no-headers
+
+      <ul>
+        <li><a href="commands.html#cmdoption-find-headers">find command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --hint &lt;hint&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-register-hint">register command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --identurl &lt;identurl&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-identurl">bitwarden command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --mfa &lt;mfa&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-mfa">login command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --mfa_token &lt;mfa_token&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-mfa-token">login command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --name &lt;name&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-register-name">register command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --password &lt;password&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-password">login command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-register-password">register command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    --url &lt;url&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-url">bitwarden command line option</a>
+</li>
+      </ul></li>
+      <li>
+    --version
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-version">bitwarden command line option</a>
+</li>
+      </ul></li>
+      <li>
+    -d, --decrypt, --no-decrypt
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-name-d">fetch_name command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-d">fetch_uuid command line option</a>
+</li>
+      </ul></li>
+      <li>
+    -f, --fmt &lt;fmt&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-config-f">config command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-find-f">find command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-sql-f">sql command line option</a>
+</li>
+      </ul></li>
+      <li>
+    -p, --params &lt;params&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-sql-p">sql command line option</a>
+</li>
+      </ul></li>
+      <li>
+    -p, --pwonly
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-name-p">fetch_name command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-p">fetch_uuid command line option</a>
+</li>
+      </ul></li>
+      <li>
+    -t, --timeout &lt;timeout&gt;
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-t">login command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -76,12 +220,27 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.db.badOrMissingDB">badOrMissingDB() (in module bitwarden.db)</a>
 </li>
+      <li>
+    bitwarden command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-bitwarden-db">--db &lt;db&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-bitwarden-debug">--debug, --no-debug</a>
+</li>
+        <li><a href="commands.html#cmdoption-bitwarden-identurl">--identurl &lt;identurl&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-bitwarden-url">--url &lt;url&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-bitwarden-version">--version</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#module-bitwarden.agent">bitwarden.agent (module)</a>
 </li>
       <li><a href="internals.html#module-bitwarden.client">bitwarden.client (module)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#module-bitwarden.crypto">bitwarden.crypto (module)</a>
 </li>
       <li><a href="internals.html#module-bitwarden.db">bitwarden.db (module)</a>
@@ -102,12 +261,23 @@
 </li>
       <li><a href="internals.html#bitwarden.client.Client">Client (class in bitwarden.client)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.db.Config.client_token">client_token (bitwarden.db.Config attribute)</a>
 </li>
       <li><a href="internals.html#bitwarden.db.Config">Config (class in bitwarden.db)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    config command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-config-f">-f, --fmt &lt;fmt&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-config-arg-key">KEY</a>
+</li>
+        <li><a href="commands.html#cmdoption-config-arg-value">VALUE</a>
+</li>
+      </ul></li>
       <li><a href="internals.html#bitwarden.db.connect">connect() (in module bitwarden.db)</a>
 </li>
   </ul></td>
@@ -134,28 +304,89 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    EMAIL
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-arg-email">login command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-register-arg-email">register command line option</a>
+</li>
+      </ul></li>
       <li><a href="internals.html#bitwarden.db.Config.email">email (bitwarden.db.Config attribute)</a>
 </li>
       <li><a href="internals.html#bitwarden.crypto.encodeCipherString">encodeCipherString() (in module bitwarden.crypto)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.crypto.encrypt">encrypt() (in module bitwarden.crypto)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.db.Config.encryption_key">encryption_key (bitwarden.db.Config attribute)</a>
 </li>
+      <li>
+    environment variable
+
+      <ul>
+        <li><a href="commands.html#envvar-BITWARDEN_DB">BITWARDEN_DB</a>
+</li>
+        <li><a href="commands.html#envvar-BITWARDEN_IDENT_URL">BITWARDEN_IDENT_URL</a>
+</li>
+        <li><a href="commands.html#envvar-BITWARDEN_URL">BITWARDEN_URL</a>
+</li>
+        <li><a href="commands.html#envvar-DEBUG">DEBUG</a>
+</li>
+        <li><a href="commands.html#envvar-USER">USER</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="internals.html#bitwarden.client.Client.fetchName">fetchName() (bitwarden.client.Client method)</a>
+      <li>
+    fetch_name command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-name-fulldecrypt">--fulldecrypt</a>
 </li>
+        <li><a href="commands.html#cmdoption-fetch-name-d">-d, --decrypt, --no-decrypt</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-name-p">-p, --pwonly</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-name-arg-name">NAME</a>
+</li>
+      </ul></li>
+      <li>
+    fetch_uuid command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-uuid-fulldecrypt">--fulldecrypt</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-d">-d, --decrypt, --no-decrypt</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-p">-p, --pwonly</a>
+</li>
+        <li><a href="commands.html#cmdoption-fetch-uuid-arg-uuid">UUID</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="internals.html#bitwarden.client.Client.fetchName">fetchName() (bitwarden.client.Client method)</a>
+</li>
       <li><a href="internals.html#bitwarden.client.Client.fetchUUID">fetchUUID() (bitwarden.client.Client method)</a>
 </li>
+      <li>
+    find command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-find-headers">--headers, --no-headers</a>
+</li>
+        <li><a href="commands.html#cmdoption-find-f">-f, --fmt &lt;fmt&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-find-arg-query">QUERY</a>
+</li>
+      </ul></li>
       <li><a href="internals.html#bitwarden.client.Client.find">find() (bitwarden.client.Client method)</a>
 </li>
   </ul></td>
@@ -201,11 +432,39 @@
   </ul></td>
 </tr></table>
 
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    KEY
+
+      <ul>
+        <li><a href="commands.html#cmdoption-config-arg-key">config command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.db.Config.last_sync_time">last_sync_time (bitwarden.db.Config attribute)</a>
 </li>
+      <li>
+    login command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-login-mfa">--mfa &lt;mfa&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-login-mfa-token">--mfa_token &lt;mfa_token&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-login-password">--password &lt;password&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-login-t">-t, --timeout &lt;timeout&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-login-arg-email">EMAIL</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.client.Client.login">login() (bitwarden.client.Client method)</a>
@@ -231,6 +490,19 @@
   </ul></td>
 </tr></table>
 
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    NAME
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-name-arg-name">fetch_name command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -251,8 +523,38 @@
   </ul></td>
 </tr></table>
 
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    QUERY
+
+      <ul>
+        <li><a href="commands.html#cmdoption-find-arg-query">find command line option</a>
+</li>
+        <li><a href="commands.html#cmdoption-sql-arg-query">sql command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    register command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-register-hint">--hint &lt;hint&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-register-name">--name &lt;name&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-register-password">--password &lt;password&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-register-arg-email">EMAIL</a>
+</li>
+      </ul></li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.client.Client.register">register() (bitwarden.client.Client method)</a>
 </li>
@@ -266,12 +568,23 @@
 </li>
       <li><a href="internals.html#bitwarden.db.Config.set">set() (bitwarden.db.Config method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.client.Client.slab">slab() (bitwarden.client.Client method)</a>
 </li>
       <li><a href="internals.html#bitwarden.db.Config.slab_location">slab_location (bitwarden.db.Config attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    sql command line option
+
+      <ul>
+        <li><a href="commands.html#cmdoption-sql-f">-f, --fmt &lt;fmt&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-sql-p">-p, --params &lt;params&gt;</a>
+</li>
+        <li><a href="commands.html#cmdoption-sql-arg-query">QUERY</a>
+</li>
+      </ul></li>
       <li><a href="internals.html#bitwarden.crypto.symmetricKey">symmetricKey() (in module bitwarden.crypto)</a>
 </li>
   </ul></td>
@@ -290,10 +603,30 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.crypto.UnimplementedError">UnimplementedError</a>, <a href="internals.html#bitwarden.db.UnimplementedError">[1]</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="internals.html#bitwarden.db.Config.url">url (bitwarden.db.Config attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    UUID
+
+      <ul>
+        <li><a href="commands.html#cmdoption-fetch-uuid-arg-uuid">fetch_uuid command line option</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    VALUE
+
+      <ul>
+        <li><a href="commands.html#cmdoption-config-arg-value">config command line option</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 

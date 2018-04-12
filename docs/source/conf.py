@@ -14,9 +14,12 @@
 #
 import os
 import sys
+import subprocess
 #sys.path.insert(0, os.path.expanduser('~/src/bitwarden/bitwarden-cli/python'))
 sys.path.insert(0, os.path.abspath('../python/'))
-
+site_packages = subprocess.getoutput('pipenv --venv')
+site_packages = os.path.join(site_packages,'lib/python3.6/site-packages')
+sys.path.append(site_packages)
 
 # -- Project information -----------------------------------------------------
 
@@ -46,6 +49,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
+    'sphinx_click.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

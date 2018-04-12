@@ -2,18 +2,13 @@ Cross Platform Bitwarden library and CLI with sudolikeaboss functionality.
 
 This repo houses both python and rust versions.
 
-STATUS: python version works, rust version does not fully work yet (pull
-requests, patches, etc welcome) 
-	patches, bug reports and code welcome.
-	the python version is meant as an MVP.
-	Unknown at this time if the python version will just call out to rust
-	or if rust will entirely replace python.
-	at the very least the agent should exist in rust, and not python.
-
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home 
 But is mirrored to github: 
 	https://github.com/birlorg/bitwarden-cli
-Historic fun fact: all crypto code had to be stored outside 
+
+Documentation: https://fossil.birl.ca/bitwarden-cli/doc/trunk/docs/build/html/index.html
+
+Historic fun fact: all crypto code had to be written and stored outside 
 of the USA at one time.
 
 ------------------------------------------------------------ 
