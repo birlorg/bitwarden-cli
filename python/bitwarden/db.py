@@ -11,7 +11,6 @@ import json
 import logging
 import signal
 import subprocess
-import time
 # pylint: disable=E0611,E0401
 from urllib.parse import urlparse
 #pylint: disable=E0401
@@ -197,7 +196,7 @@ class Config():
 		return value
 
 	@slab_location.setter
-	def agent_location(self, value):
+	def slab_location(self, value):
 		"""setter"""
 		return self.set('slab_location', value)
 
@@ -233,12 +232,12 @@ class Config():
         timeout for the agent. <0 means no timeout.
         > 0 means timeout for that many seconds.
         """
-		return int(self.get('agent_tiemout', 0))
+		return int(self.get('agent_timeout', 0))
 
 	@agent_timeout.setter
 	def agent_timeout(self, value):
 		"""setter for agent_timeout"""
-		return self.set('agent_timeout', int(value))
+		return self.set('agent_timeout', value)
 
 	@property
 	def agent_port(self):
@@ -269,7 +268,7 @@ class Config():
 			    json={
 			        'key': self.agent_token,
 			        'exit': False
-			    })
+			    }, timeout=0.3)
 			if r.status_code != 200:
 				log.error(r.text)
 			try:
@@ -279,6 +278,8 @@ class Config():
 				return None
 		except requests.exceptions.ConnectionError:
 			log.error("agent not running, you must login.")
+		except requests.exceptions.Timeout:
+			log.error("timeout, agent probably not running.")
 		try:
 			ret = base64.b64decode(key['master_key'])
 		except IndexError:
@@ -342,7 +343,7 @@ class Config():
 		out = json.dumps(data) + "\n"
 		p.stdin.write(out.encode('utf-8'))
 		self.agent_token = agent_token
-		self.agent_timeout = time.time() + timeout
+		# self.agent_timeout = time.time() + timeout
 		out = p.communicate()
 		log.debug("agent returned:%s:%s", out[0], out[1])
 		return True

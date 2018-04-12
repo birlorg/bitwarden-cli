@@ -106,7 +106,7 @@ def register(cli, email, password, name, hint):
 
 @cli.command()
 @click.argument('email', required=False)
-@click.option('--timeout', "-t", default=0)
+@click.option('--timeout', "-t", default=0, type=int)
 @click.option('--password', prompt=True, hide_input=True)
 @click.option(
     '--mfa',

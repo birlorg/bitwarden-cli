@@ -97,11 +97,17 @@ class Client(object):
 			token = r.json()
 			token['token_expires'] = time.time() + token['expires_in']
 			self.config.client_token = token
-			if timeout == 0:
-				self.config.agent_timeout = token['expires_in']
-			else:
-				self.config.agent_timeout = timeout
 			log.debug("token set:%s", pprint.pformat(token))
+			if timeout < 0:
+				self.config.agent_timeout = 0
+			elif timeout == 0:
+				log.debug("timeout 0, setting to:%s", token['expires_in'])
+				self.config.agent_timeout = token['expires_in']
+			elif timeout > 0:
+				self.config.agent_timeout = timeout
+			else:
+				log.error("bad timeout %s: This should be impossible, please yell @ someone.", timeout)
+			log.debug("timeout set to %s because arg was %s: %s", self.config.agent_timeout, timeout, type(timeout))
 			self.config.master_key = masterKey
 			self.config.encryption_key = token['Key']
 			return True

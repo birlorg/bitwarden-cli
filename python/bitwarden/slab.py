@@ -1,10 +1,15 @@
-import os
-import subprocess
-import sys
-import tempfile
 """
 Utilities for slab mode.
 """
+import os
+import logging
+import subprocess
+import sys
+import tempfile
+
+log = logging.getLogger(__name__)
+log.propagate = True
+
 SLABSCRIPT = """
 	tell app "System Events"
 		Activate
@@ -68,4 +73,7 @@ def choice(choices, slab_location):
     elif os.path.exists('/usr/local/bin/choose'):
         return genericChooser(choices, '/usr/local/bin/choose')
     else:
-        return appleScriptChooser(choices)
+        if sys.platform == 'darwin':
+            return appleScriptChooser(choices)
+        else:
+            log.error("no valid chooser, try bw config slab_location <chooser binary>")
