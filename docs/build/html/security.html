@@ -50,11 +50,25 @@ welcome)</p>
 <p>The agent requires a token to get the master key from it’s in-memory store.
 This is currently 16 bytes of os.urandom() on startup and is stored on disk, but
 changes every time a new agent runs.details are in python/bitwarden/db.py</p>
-<p>This should mostly function fine on Windows, but is currently mostly untested. bug
-reports and patches welcome.</p>
+<div class="section" id="python-for-security-code">
+<h2>Python, for security code?!<a class="headerlink" href="#python-for-security-code" title="Permalink to this headline">¶</a></h2>
+<p>Well, to be fair the only other Bitwarden clients
+are written in Javascript. But mostly python got me to an MVP very quickly,
+so I can prototype how it all works and ensure a decent design, etc. I plan
+on converting at least the agent and the crypto to Rust, but Crypto in Rust
+is not well-tested and battle-hardened yet, since it’s such a new ecosystem,
+there has been some work on TLS in Rust, but we don’t need TLS, we need other
+crypto primitives. Python has solid, well-established crypto code. Dure it’s
+dynamically typed, and it’s hard to ensure things really are gone when you
+say they are. You can run the agent in Rust today, but it’s not fully fleshed
+out and is not integrated into the python package, yet. Once I figure that
+all out, there will be no long-term secrets in Python, it will only
+have short-lived secrets.</p>
 <p>Security sensitive reports can be sent to:
-<a class="reference external" href="mailto:bitwarden&#37;&#52;&#48;birl&#46;ca">bitwarden<span>&#64;</span>birl<span>&#46;</span>ca</a>
-and you can GPG sign messages to me available via  keyserver hkps://hkps.pool.sks-keyservers.net
+bitwarden &#64;at&#64; birl.ca
+sending me security sensitive bits that also affect bitwarden proper will also be shared with them.</p>
+<p>All new code commits by me should ne GPG signed now, as well as the releases on pypi.</p>
+<p>You can GPG sign messages to me available via  keyserver hkps://hkps.pool.sks-keyservers.net
 and here:</p>
 <p>—–BEGIN PGP PUBLIC KEY BLOCK—–</p>
 <p>mQINBFrOyH8BEADUiye1SSBIlIhjFAATlZ3voTkLoMsuE6Oe2ihBZAA8oL/TPPfL
@@ -108,13 +122,22 @@ Zr45w6sqPdt+nztUc6I+QHK2pgA+
 =O8VJ
 —–END PGP PUBLIC KEY BLOCK—–</p>
 </div>
+</div>
 
 
           </div>
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Security</a><ul>
+<li><a class="reference internal" href="#python-for-security-code">Python, for security code?!</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
