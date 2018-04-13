@@ -24,12 +24,29 @@ The agent requires a token to get the master key from it's in-memory store.
 This is currently 16 bytes of os.urandom() on startup and is stored on disk, but
 changes every time a new agent runs.details are in python/bitwarden/db.py
 
-This should mostly function fine on Windows, but is currently mostly untested. bug
-reports and patches welcome.
+Python, for security code?!
+---------------------------------
+
+Well, to be fair the only other Bitwarden clients
+are written in Javascript. But mostly python got me to an MVP very quickly,
+so I can prototype how it all works and ensure a decent design, etc. I plan
+on converting at least the agent and the crypto to Rust, but Crypto in Rust
+is not well-tested and battle-hardened yet, since it's such a new ecosystem,
+there has been some work on TLS in Rust, but we don't need TLS, we need other
+crypto primitives. Python has solid, well-established crypto code. Dure it's
+dynamically typed, and it's hard to ensure things really are gone when you
+say they are. You can run the agent in Rust today, but it's not fully fleshed
+out and is not integrated into the python package, yet. Once I figure that
+all out, there will be no long-term secrets in Python, it will only
+have short-lived secrets.
 
 Security sensitive reports can be sent to:
-bitwarden@birl.ca
-and you can GPG sign messages to me available via  keyserver hkps://hkps.pool.sks-keyservers.net
+bitwarden @at@ birl.ca
+sending me security sensitive bits that also affect bitwarden proper will also be shared with them.
+
+All new code commits by me should ne GPG signed now, as well as the releases on pypi.
+
+You can GPG sign messages to me available via  keyserver hkps://hkps.pool.sks-keyservers.net
 and here:
 
 -----BEGIN PGP PUBLIC KEY BLOCK-----

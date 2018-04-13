@@ -26,6 +26,7 @@ import tablib  # http://docs.python-tablib.org/en/master/
 import click_log
 import bitwarden.db
 import bitwarden.client as client
+import bitwarden.crypto as crypto
 
 click.disable_unicode_literals_warning = True
 
@@ -160,6 +161,37 @@ MFA Support:
 	cli.client.login(email, password, timeout, mfa, mfa_token)
 	del password
 
+@cli.command()
+@click.argument('cmd', required=False)
+@click.option('--timeout', "-t", default=0, type=int)
+@click.option('--password', default=None)
+@click.option('--email', default = None)
+@click.pass_obj
+def agent(cli, cmd, timeout, password, email):
+	"""Agent command lets you manage the agent.
+	
+ without an cmd argument, it will display the status of the agent (running or
+ not and how much longer it should continue to run)
+
+with a cmd arg of start, it will ask for your password (and maybe email if not stored in config)
+	and then create the master key and startup the agent.
+
+with a cmd arg of stop, it will stop the agent, and erase the master key.	
+	"""
+	if not cmd:
+		click.echo("agent status: %s" % cli.config.isAgentRunning())
+	elif cmd == 'start':
+		if not email:
+			email = cli.config.email
+			if not email:
+				email = click.prompt("email:")
+		if not password:
+			password = click.prompt("password: ", hide_input=True)
+		cli.config.master_key = crypto.makeKey(password, email)
+	elif cmd == 'stop':
+		cli.config.master_key = None
+	else:
+		click.echo("Invalid command:%s" % cmd)
 
 @cli.command()
 @click.confirmation_option(prompt='Are you sure you want to empty the db?')

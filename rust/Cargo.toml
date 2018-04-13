@@ -17,3 +17,4 @@ rpassword = "2.0.0"
 rouille = "^2.1"
 uuid = { version = "^0.6", features = ["v5"]}
 clap = {version = "^2.31", features = ["yaml"]}
+core-foundation = "0.4.6"
