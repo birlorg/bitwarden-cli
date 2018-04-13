@@ -163,24 +163,30 @@ MFA Support:
 
 @cli.command()
 @click.argument('cmd', required=False)
-@click.option('--timeout', "-t", default=0, type=int)
+@click.option('--timeout', "-t", default=3600, type=int)
 @click.option('--password', default=None)
-@click.option('--email', default = None)
+@click.option('--email', default=None)
 @click.pass_obj
 def agent(cli, cmd, timeout, password, email):
 	"""Agent command lets you manage the agent.
-	
- without an cmd argument, it will display the status of the agent (running or
- not and how much longer it should continue to run)
+
+ without an cmd argument, it will show the PID of the agent or None if not running.
 
 with a cmd arg of start, it will ask for your password (and maybe email if not stored in config)
 	and then create the master key and startup the agent.
+    --timeout is optional and is how long the agent should run for in seconds.
+    If set to a negative value (say -t -1) then the agent
+    will never stop, until you call the logout command.
+	defaults to 3,600 seconds == 60 minutes == 1hr.
 
-with a cmd arg of stop, it will stop the agent, and erase the master key.	
+    --email is optional, as it remembers the email from previous logins.
+
+with a cmd arg of stop, it will stop the agent, and erase the master key.
 	"""
 	if not cmd:
-		click.echo("agent status: %s" % cli.config.isAgentRunning())
+		click.echo(cli.config.isAgentRunning())
 	elif cmd == 'start':
+		cli.config.agent_timeout = timeout
 		if not email:
 			email = cli.config.email
 			if not email:
