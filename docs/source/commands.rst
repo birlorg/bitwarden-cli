@@ -39,6 +39,11 @@ Commands:
   :prog: config
   :show-nested:
 
+----
+
+.. click:: bitwarden.main:agent
+  :prog: agent
+  :show-nested:
 
 ----
 
