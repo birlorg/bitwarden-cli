@@ -39,7 +39,7 @@ pidPath = os.path.join(
     standardpaths.get_writable_path('app_local_data'), 'agent.pid')
 pidFile = daemon.pidfile.PIDLockFile(pidPath)
 
-urls = ('/', 'index')
+urls = ('/agent/masterkey', 'masterkey')
 
 secret = {}
 
@@ -50,7 +50,7 @@ def timeout():
 	web.httpserver.server.stop()
 
 
-class index:
+class masterkey:
 	"""webpy index class.
 	"""
 	def POST(self):
@@ -77,7 +77,7 @@ class index:
 def daemonizedMain(secret):
 	"""daemonize me, please!
 	"""
-	if 'timeout' in secret:
+	if secret.timeout > 0:
 		log.debug("will timeout in %s seconds", secret['timeout'])
 		threading.Timer(int(secret['timeout']), timeout).start()
 	app = web.application(urls, globals())

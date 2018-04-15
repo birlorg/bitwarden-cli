@@ -1,0 +1,176 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Cryptography &#8212; Bitwarden CLI 0.3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Security" href="security.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cryptography">
+<span id="id1"></span><h1>Cryptography<a class="headerlink" href="#cryptography" title="Permalink to this headline">¶</a></h1>
+<p>TODO: do the other Encryption Types as well.</p>
+<p>There is not a good writeup of how the cryptography in Bitwarden actually works.
+Bitwarden briefly covers it <a class="reference external" href="https://help.bitwarden.com/article/what-encryption-is-used/">here</a> . They also have a web page
+showing the <a class="reference external" href="https://help.bitwarden.com/crypto.html">crypto</a> and &#64;jcs wrote up the <a class="reference external" href="https://github.com/jcs/bitwarden-ruby/blob/master/API.md">API</a>: which covers the crypto, but glosses over some things.</p>
+<p>I’ve written the client crypto code for Bitwarden in python and rust, so feel like it’s good to share
+what I’ve learned about how it all works.</p>
+<p>We start with your email and password, these are the building blocks that everything is built from.</p>
+<p>Your email address will be brought down to lowercase, and then will become the salt for everything.
+This makes sense, since you want salts to be unique, and email addresses are unique. If you want a
+tough salt, use a tough email address.</p>
+<p>Every “Cipher” or login entry in Bitwarden is using symmetric encryption, specifically AES-256-CBC with PKCS#7 padding.</p>
+<p>To decrypt something you need the encrypted text, which in Bitwarden comes in the form of a “CipherString”
+You also need the decryption Key and you need a mac key (to handle the <a class="reference external" href="https://en.wikipedia.org/wiki/HMAC">HMAC</a> part:</p>
+<div class="section" id="cipherstrings">
+<h2>CipherStrings<a class="headerlink" href="#cipherstrings" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>Cipher Strings include:</dt>
+<dd><ul class="first last simple">
+<li>Encryption type (so far 8 are setup)</li>
+<li>iv (the initialization vector to AES)</li>
+<li>ct (the encrypted text aka “cipher text”)</li>
+<li>mac (the Message authentication code to verify this message is not tampered with) - Optional.</li>
+</ul>
+</dd>
+</dl>
+<p>An example CipherString:</p>
+<blockquote>
+<div>2.6DmdNKlm3a+9k/5DFg+pTg==|7q1Arwz/ZfKEx+fksV3yo0HMQdypHJvyiix6hzgF3gY=|7lSXqjfq5rD3/3ofNZVpgv1ags696B2XXJryiGjDZvk=</div></blockquote>
+<p>Cipher Strings have 2 different seperators, a . and a |  The period seperates the encryptType from the iv and rest of the string.
+the iv, ct and mac are seperated by a | symbol.
+the iv, ct and mac are base64 encoded via <a class="reference external" href="https://tools.ietf.org/html/rfc3548.html">RFC3548</a>.</p>
+<p>Cipherstrings are what Bitwarden speaks across the API and what gets stored on disk.</p>
+<p>So back to decryption.  We get a CipherString but we still need a decryptionKey and a macKey.</p>
+</div>
+<div class="section" id="getting-a-decryptionkey-and-mackey">
+<h2>Getting a decryptionKey and macKey<a class="headerlink" href="#getting-a-decryptionkey-and-mackey" title="Permalink to this headline">¶</a></h2>
+<p>To get these, we have to go back to our email and password.</p>
+<p>When you register and create an account, 2 “secret” things are created, a “master password hash”
+and a “key” what I call a protectedKey.</p>
+<p>The Master Key is created by 5000 rounds of pbkdf2_hmac see
+<a class="reference external" href="internals.html#bitwarden.crypto.makeKey">bitwarden.crypto.makeKey</a> for details, using your email as salt and your
+password as key.</p>
+<p>This master key is <em>never</em> sent anywhere, it’s very important to keep it safe when it exists.</p>
+<p>To create a Protected Key, we just randomly generate 64 bytes of data, with
+16 bits of random iv and encrypt it with AES-CBC using the MasterKey, which
+we just talked about. Creation happens in the <a class="reference external" href="internals.html#bitwarden.crypto.makeEncKey">makeEncKey</a> and then gets
+turned into a CipherString, which becomes the Protected Key.</p>
+<p>The protectedKey is what we care about, it’s a combination of the
+decryptionKey and macKey that we need, stuffed inside of a CipherString. The
+protectedKey gets a unique encryption type (0) and does not get a MAC. Since
+it’s inside of a CipherString, we know it’s encrypted, so we have to decrypt
+it. To decrypt it we need the MasterKey.</p>
+<p>The Master key can then be used as the key to decrypt the protectedKey see
+<a class="reference external" href="internals.html#bitwarden.crypto.decryptEncryptionKey">bitwarden.crypto.decryptEncryptionKey</a> We decrypt using AES CBC, and we
+will get back 64 bytes of plaintext. the first half [0:32] will be the
+decryptionKey for CipherStrings of encryption type &gt; 0. The second half
+(32:64) will be the macKey.</p>
+</div>
+<div class="section" id="decryption">
+<h2>Decryption<a class="headerlink" href="#decryption" title="Permalink to this headline">¶</a></h2>
+<p>Now we have our Master Key and macKey, we can decrypt. It’s also pretty
+straightforward. We decode the CipherString to get the ct, iv and mac. Then
+we compute a mac (iv + ct) using SHA256 HMAC and compare it to the mac we got
+from the CipherString. See <a class="reference external" href="internals.html#bitwarden.crypto.macsEqual">macsEqual</a> for comparison details.</p>
+<p>Assuming our macs are equal, we can decrypt with AES-CBC to get padded plaintext.
+Then we use PKCS7 padding scheme to unpad (as described by Section 10.3, step 2, of <a class="reference external" href="https://tools.ietf.org/html/rfc2315.html">RFC2315</a>)</p>
+<p>decryption is implemented in <a class="reference external" href="internals.html#bitwarden.crypto.decrypt">decrypt</a></p>
+</div>
+<div class="section" id="encryption">
+<h2>Encryption<a class="headerlink" href="#encryption" title="Permalink to this headline">¶</a></h2>
+<p>To encrypt, we need the plaintext to encrypt, the masterKey and the macKey.
+Then we pad using PKCS7, the reverse of unpadding above. then AES-CBC again
+and then compute an SHA256 HMAC. This is implemented in <a class="reference external" href="internals.html#bitwarden.crypto.encrypt">encrypt</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Cryptography</a><ul>
+<li><a class="reference internal" href="#cipherstrings">CipherStrings</a></li>
+<li><a class="reference internal" href="#getting-a-decryptionkey-and-mackey">Getting a decryptionKey and macKey</a></li>
+<li><a class="reference internal" href="#decryption">Decryption</a></li>
+<li><a class="reference internal" href="#encryption">Encryption</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="security.html" title="previous chapter">Security</a></li>
+      <li>Next: <a href="troubleshooting.html" title="next chapter">Troubleshooting</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/crypto.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Birl Org.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/crypto.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

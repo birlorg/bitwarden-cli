@@ -21,7 +21,7 @@ import standardpaths
 standardpaths.configure(
     application_name='bitwarden', organization_name='birl.org')
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("bitwarden.db")
 log.propagate = True
 
 
@@ -205,10 +205,13 @@ class Config():
 	def agent_location(self):
 		"""path to agent executable.."""
 		value = self.get('agent_location', None)
-		if not value:
+		# log.debug("agent location value from DB:%s", value)
+		if value is None or not os.path.exists(value):
 			# get last item off the stack, so we can rock the actual binary call path.
-			value = os.path.dirname(os.path.abspath(inspect.stack()[-1][1]))
-			value = os.path.join(value, 'bitwarden-agent')
+			default_value = os.path.dirname(os.path.abspath(inspect.stack()[-1][1]))
+			default_value = os.path.join(default_value, 'bitwarden-agent')
+			log.debug("path %s for the agent does not exist, falling back to default:%s", value, default_value)
+			return default_value
 		return value
 
 	@agent_location.setter
@@ -264,11 +267,11 @@ class Config():
 		ret = None
 		try:
 			r = requests.post(
-			    "http://127.0.0.1:{}".format(self.agent_port),
-			    json={
-			        'key': self.agent_token,
-			        'exit': False
-			    }, timeout=0.3)
+				"http://localhost:{}/agent/masterkey".format(self.agent_port), 
+				json={'key': self.agent_token, 'exit': False},
+				 timeout=1,
+				  headers = {'Content-Type': 'application/json'}
+			)
 			if r.status_code != 200:
 				log.error(r.text)
 			try:
@@ -278,8 +281,10 @@ class Config():
 				return None
 		except requests.exceptions.ConnectionError:
 			log.error("agent not running, you must login.")
+			return None
 		except requests.exceptions.Timeout:
 			log.error("timeout, agent probably not running.")
+			return None
 		try:
 			ret = base64.b64decode(key['master_key'])
 		except IndexError:
@@ -303,6 +308,7 @@ class Config():
 			# agent already running, not so good for us.
 			pid = int(open(pidFile, 'r').read())
 			if psutil.pid_exists(pid):
+				log.debug("Agent running:%s", pid)
 				return pid
 			else:
 				# cleanup
@@ -316,10 +322,12 @@ class Config():
         """
 		pid = self.isAgentRunning()
 		if pid:
+			log.debug("stopping agent, since we are being asked to set a new master_key.")
 			os.kill(pid, signal.SIGTERM)
 		if value is None:
 			log.debug("value of none: shutdown agent, not starting it again")
 			return
+
 		key = base64.b64encode(value).decode('utf-8')
 		agent_token = base64.b64encode(os.urandom(16)).decode('utf-8')
 		cmd = [self.agent_location, '127.0.0.1:{}'.format(self.agent_port)]
@@ -332,13 +340,15 @@ class Config():
 		data = {
 		    'master_key': key,
 		    'agent_token': agent_token,
-		    'port': self.agent_port
+		    'port': self.agent_port,
+			"timeout":0,
+			'agent_location': str(standardpaths.get_writable_path('app_local_data'))
 		}
 		timeout = self.agent_timeout
 		if timeout > 0:
-			data['tiemout'] = timeout
+			data['timeout'] = timeout
 		else:
-			log.debug("sending no timeout because:%s", timeout)
+			log.debug("sending timeout of 0 because:%s", timeout)
 		log.debug("sending to agent:%s", pprint.pformat(data))
 		out = json.dumps(data) + "\n"
 		p.stdin.write(out.encode('utf-8'))

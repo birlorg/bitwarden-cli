@@ -30,11 +30,9 @@ import bitwarden.crypto as crypto
 
 click.disable_unicode_literals_warning = True
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("bitwarden")
 click_log.basic_config(log)
-BITWARDEN_log = logging.getLogger("bitwarden")
-BITWARDEN_log.setLevel(logging.INFO)
-BITWARDEN_log.propagate = True
+log.propagate = True
 
 standardpaths.configure(
     application_name='bitwarden', organization_name='birl.org')
@@ -46,8 +44,9 @@ class CLI():
 	def __init__(self, url=None, identurl=None, debug=False, dbURL=None):
 		"""initialize"""
 		self.debug = debug
+		lvl = log.getEffectiveLevel()
+		log.debug("setting bitwarden log level to: %s", lvl)
 		if self.debug:
-			BITWARDEN_log.setLevel(logging.DEBUG)
 			log.setLevel(logging.DEBUG)
 			log.debug("debug turned on")
 		log.debug("db:%s", dbURL)
@@ -170,7 +169,8 @@ MFA Support:
 def agent(cli, cmd, timeout, password, email):
 	"""Agent command lets you manage the agent.
 
- without an cmd argument, it will show the PID of the agent or None if not running.
+without an cmd argument, it will show the PID of the agent or None if not running.
+
 
 with a cmd arg of start, it will ask for your password (and maybe email if not stored in config)
 	and then create the master key and startup the agent.
@@ -180,6 +180,7 @@ with a cmd arg of start, it will ask for your password (and maybe email if not s
 	defaults to 3,600 seconds == 60 minutes == 1hr.
 
     --email is optional, as it remembers the email from previous logins.
+
 
 with a cmd arg of stop, it will stop the agent, and erase the master key.
 	"""
@@ -193,7 +194,10 @@ with a cmd arg of stop, it will stop the agent, and erase the master key.
 				email = click.prompt("email:")
 		if not password:
 			password = click.prompt("password: ", hide_input=True)
+		log.debug("setting master key")
 		cli.config.master_key = crypto.makeKey(password, email)
+		if not cli.config.isAgentRunning():
+			log.error("Agent did not start for some reason, sorry.")
 	elif cmd == 'stop':
 		cli.config.master_key = None
 	else:
@@ -522,6 +526,8 @@ will set the login email to nobody@example.com
 				cli.config.set(key, value)
 			if key in dir(cli.config):
 				if value:
+					if value == 'None':
+						value = None
 					dataset.append((key, old, value))
 				else:
 					dataset.append((key, cli.config.get(key)))

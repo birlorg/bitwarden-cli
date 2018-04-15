@@ -30,7 +30,7 @@ from cryptography.hazmat.primitives import hmac as Cipherhmac
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
-log = logging.getLogger(__name__)
+log = logging.getLogger("bitwarden.crypto")
 log.propagate = True
 
 

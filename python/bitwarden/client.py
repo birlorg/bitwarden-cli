@@ -14,7 +14,7 @@ import bitwarden.db as DB
 import bitwarden.crypto as crypto
 import bitwarden.slab as slab
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("bitwarden.client")
 log.propagate = True
 
 standardpaths.configure(

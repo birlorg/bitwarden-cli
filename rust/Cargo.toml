@@ -14,7 +14,8 @@ serde_derive = "1.0"
 serde_json = "1.0"
 reqwest = "0.8.5"
 rpassword = "2.0.0"
-rouille = "^2.1"
+#rouille = { git= "https://github.com/birlorg/rouille"}
+tiny_http = "0.6.0"
+secstr = "0.3.0"
 uuid = { version = "^0.6", features = ["v5"]}
 clap = {version = "^2.31", features = ["yaml"]}
-core-foundation = "0.4.6"
