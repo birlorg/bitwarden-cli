@@ -14,6 +14,36 @@ docs on how this all works: https://help.bitwarden.com/crypto.html
 and https://github.com/jcs/bitwarden-ruby/blob/master/API.md
 
 
+Types 4 and 6:
+https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
+
+function generateRsaKeypair() {
+                const rsaOptions = {
+                    name: 'RSA-OAEP',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
+                    hash: { name: 'SHA-1' }
+                };
+
+                let keypair, publicKey;
+                return window.crypto.subtle.generateKey(rsaOptions, true, ['encrypt', 'decrypt'])
+                    .then((generatedKey) => {
+                        keypair = generatedKey;
+                        return window.crypto.subtle.exportKey('spki', keypair.publicKey);
+                    }).then((exportedKey) => {
+                        publicKey = new ByteData(exportedKey);
+                        return window.crypto.subtle.exportKey('pkcs8', keypair.privateKey);
+                    }).then((exportedKey) => {
+                        return {
+                            publicKey: publicKey,
+                            privateKey: new ByteData(exportedKey)
+                        };
+                    }).catch((err) => {
+                        console.error(err);
+                    });
+            }
+
+
 """
 import base64
 import os
