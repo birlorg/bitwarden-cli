@@ -61,6 +61,9 @@ class masterkey:
 		except json.JSONDecodeError:
 			return json.dumps({'error': 'invalid JSON'})
 		if data['key'] == secret['agent_token']:
+			if data['exit']:
+				log.info("exit called for")
+				sys.exit(0)
 			log.info("correct agent secret, returning master_key")
 			return json.dumps({'master_key': secret['master_key']})
 		else:
@@ -77,9 +80,12 @@ class masterkey:
 def daemonizedMain(secret):
 	"""daemonize me, please!
 	"""
-	if secret.timeout > 0:
+	if secret['timeout'] > 0:
 		log.debug("will timeout in %s seconds", secret['timeout'])
 		threading.Timer(int(secret['timeout']), timeout).start()
+	else:
+		log.debug("no timeout being set.")
+	log.debug("starting up webapp")
 	app = web.application(urls, globals())
 	app.run()
 
@@ -102,13 +108,15 @@ def main():
 		sys.exit()
 	log.debug("secret recieved:%s", secret)
 	if 'foreground' in secret:
+		log.debug("not daemonizing")
 		pidFile = None
 		daemonizedMain(secret)
 	else:
+		log.debug("Daemonizing...")
 		wd = standardpaths.get_writable_path('app_local_data')
 		with daemon.DaemonContext(
 		    working_directory=wd,
-		    files_preserve=[lh.stream],
+		    files_preserve=["agent.log"],
 		    umask=0o002,
 		    pidfile=pidFile):
 			daemonizedMain(secret)

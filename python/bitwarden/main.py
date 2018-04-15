@@ -18,7 +18,7 @@ easy as bw config slab_chooser fzf plus then is cross platform.
 import os
 import logging
 import sys
-
+import time
 # pylint: disable=E0401
 import click
 import standardpaths  # https://github.com/uranusjr/pystandardpaths
@@ -196,6 +196,7 @@ with a cmd arg of stop, it will stop the agent, and erase the master key.
 			password = click.prompt("password: ", hide_input=True)
 		log.debug("setting master key")
 		cli.config.master_key = crypto.makeKey(password, email)
+		time.sleep(.5)
 		if not cli.config.isAgentRunning():
 			log.error("Agent did not start for some reason, sorry.")
 	elif cmd == 'stop':

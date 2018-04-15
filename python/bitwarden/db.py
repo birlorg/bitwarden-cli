@@ -287,7 +287,7 @@ class Config():
 			return None
 		try:
 			ret = base64.b64decode(key['master_key'])
-		except IndexError:
+		except (IndexError, KeyError):
 			log.error("expected master_key but agent returned:%s",
 			          pprint.pformat(ret))
 		return ret
