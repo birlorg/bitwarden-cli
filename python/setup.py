@@ -6,7 +6,7 @@ import os
 
 from setuptools import setup
 
-VERSION = "0.3.1"
+VERSION = "0.4.0"
 
 
 def readme():
@@ -38,6 +38,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     install_requires=read_requirements('requirements.txt'),
+    dependency_links=['http://github.com/user/repo/tarball/master#egg=package-1.0'],
     # install_requires=read_requirements('requirements.txt'),
     tests_require=read_requirements('requirements-tests-py3.txt'),
     packages=[
