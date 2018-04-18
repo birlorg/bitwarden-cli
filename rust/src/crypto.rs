@@ -36,8 +36,8 @@ pub fn make_key(password: &str, salt: &str) -> [u8; 32] {
 pub fn hashed_password(password: &str, salt: &str) -> String {
     let key = make_key(password, salt);
     //let mut derived_key = [0u8; 32];
-    let mut derived_key = [0; 32];
-    openssl::pkcs5::pbkdf2_hmac(&password.as_bytes(),salt.as_bytes(), 1, openssl::hash::MessageDigest::sha256(), &mut derived_key).unwrap();
+    // let mut derived_key = [0; 32];
+    let mut  derived_key = openssl::pkcs5::pbkdf2_hmac(&password.as_bytes(),salt.as_bytes(), 1, openssl::hash::MessageDigest::sha256(), &mut key).unwrap();
     let mut result = String::from("");
     result.push_str(&derived_key.to_base64(base64::STANDARD)[..]);
     return result;
