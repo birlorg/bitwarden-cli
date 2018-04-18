@@ -65,7 +65,8 @@ fn main() {
             let email = register_matches.value_of("email").unwrap().to_lowercase();
             println!("Register: {}", email);
             let password = rpassword::prompt_password_stdout("Password: ").unwrap();
-            let result = bitwarden::register(&url, &email, &password);
+            let result = "";
+            //let result = bitwarden::register(&url, &email, &password);
             println!("result:{}", result);
         }
         ("login", Some(login_matches)) => {
@@ -79,8 +80,8 @@ fn main() {
         ("sync", Some(sync_matches)) => {
             // Now we have a reference to login's matches
             let token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im5vYm9keUBleGFtcGxlLmNvbSIsImV4cCI6MTUyMjg4NDIzMywiaXNzIjoiTkEiLCJuYW1lIjoiIiwibmJmIjoxNTIyODgwNjMzLCJwcmVtaXVtIjpmYWxzZSwic3ViIjoiTkEifQ.46xvH6-FQKNuFWOVXLeeut3bvHE2QMSUg45aH557XRU";
-            let result = bitwarden::sync(&url, &token);
-            println!("login result:{}", result);
+            //let result = bitwarden::sync(&url, &token);
+            //println!("login result:{}", result);
 
         }
         ("add", Some(add_matches)) => {
