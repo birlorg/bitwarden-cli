@@ -93,7 +93,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: "./rust
+          at: "./rust"
       - run: mkdir target/coverage
       - run:
           name: Rerun the tests collecting coverage
