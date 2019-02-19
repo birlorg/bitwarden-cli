@@ -17,6 +17,8 @@ rpassword = "2.0.0"
 #rouille = { git= "https://github.com/birlorg/rouille"}
 tiny_http = "0.6.0"
 secstr = "0.3.0"
+openssl-sys = "0.9.40"
 openssl = "^0.10"
+hmac = "0.7.0"
 uuid = { version = "^0.6", features = ["v5"]}
 clap = {version = "^2.31", features = ["yaml"]}
