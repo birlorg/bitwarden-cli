@@ -2,6 +2,7 @@
 *	Crypto for Bitwarden against openSSL.
 *	
 */
+extern crate hmac;
 extern crate openssl;
 extern crate rustc_serialize as serialize;
 use serialize::base64;
