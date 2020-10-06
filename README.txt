@@ -11,6 +11,19 @@ Documentation: https://fossil.birl.ca/bitwarden-cli/doc/trunk/docs/build/html/in
 Historic fun fact: all crypto code had to be written and stored outside 
 of the USA at one time.
 
+
+# UPDATE for 2020:
+
+It seems people still care about this code, oddly enough.
+
+When I wrote this, the official CLI client didn't exist. I'm curious why 
+people are using(or wanting to use) this over the bitwarden offical CLI,
+since it exists now: https://help.bitwarden.com/article/cli/
+ 
+I don't currently use this code anymore, but it's still maintained-ish I guess.
+I accept PR's still anyway, but I don't actively work on this code anymore.
+
+
 ------------------------------------------------------------ 
 EXAMPLE USAGE: 
 
