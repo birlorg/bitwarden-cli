@@ -1,5 +1,7 @@
 Cross Platform Bitwarden library and CLI with sudolikeaboss functionality.
 
+** This code hasn't been touched in at least 5 years. You shouldn't use it, except perhaps as a way to understand how Bitwarden's security worked at the time. I have no idea if Bitwardens's security still works this way or not.
+
 This repo houses both python and rust versions.
 
 source repo lives @ https://fossil.birl.ca/bitwarden-cli/home 
