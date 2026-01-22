@@ -15,7 +15,7 @@ serde_json = "1.0"
 reqwest = "0.8.5"
 rpassword = "2.0.0"
 #rouille = { git= "https://github.com/birlorg/rouille"}
-tiny_http = "0.6.0"
+tiny_http = "0.8.0"
 secstr = "0.3.0"
 openssl-sys = "0.9.40"
 openssl = "^0.10"
